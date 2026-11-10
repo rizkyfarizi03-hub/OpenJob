@@ -5,6 +5,8 @@ const pool=require('../database');
 const verify=require('../middlewares/verifyToken');
 const {identity,roles,verified}=require('../middlewares/access');
 const select=require('../applicationQuery');
+const cachedResponse=require('../cachedResponse');
+const scope=require('../cacheScope');
 const fail=(res,code,message)=>res.status(code).json({status:'failed',message});
 router.use(verify,identity);
 router.post('/',roles('user'),verified,async(req,res,next)=>{
@@ -27,6 +29,7 @@ router.post('/',roles('user'),verified,async(req,res,next)=>{
  const {rows}=await db.query("INSERT INTO applications(id,user_id,job_id,document_id,cover_letter,status) VALUES($1,$2,$3,$4,$5,'pending') RETURNING *",[randomUUID(),req.userId,job.rows[0].id,value.document_id,value.cover_letter]);
  await db.query('INSERT INTO application_outbox(application_id) VALUES($1)',[rows[0].id]);
  await db.query('COMMIT');
+ await scope.invalidateAccounts(req.userId,job.rows[0].owner_id);
  res.status(201).json({status:'success',data:rows[0]});
  }catch(e){
  if(db)await db.query('ROLLBACK').catch(()=>{});
@@ -55,6 +58,8 @@ async function list(req,res,next){
  }
  if(q.job_id){values.push(q.job_id);where+=' AND a.job_id=$'+values.length;}
  if(q.status){values.push(q.status);where+=' AND a.status=$'+values.length;}
+ const key=await scope.key(scope.account(req.userId),'applications:'+JSON.stringify([req.params.userId?'user':'',req.params.jobId||'',q.page,q.limit,q.job_id||'',q.status||'']));
+ await cachedResponse(res,key,async()=>{
  const from=' FROM applications a JOIN jobs j ON j.id=a.job_id';
  // Summary covers the account's full recruitment workload, independent of filters/page.
  const summaryWhere=req.account.role==='user'?'a.user_id=$1':'j.owner_id=$1';
@@ -65,7 +70,8 @@ async function list(req,res,next){
  const count=await pool.query('SELECT COUNT(*)::int AS total'+from+' WHERE '+where,values);
  const {rows}=await pool.query(select+' WHERE '+where+' ORDER BY a.created_at DESC,a.id DESC LIMIT $'+(values.length+1)+' OFFSET $'+(values.length+2),[...values,q.limit,(q.page-1)*q.limit]);
  const total=count.rows[0].total;
- res.json({status:'success',data:{applications:rows,pagination:{page:q.page,limit:q.limit,total,pages:Math.ceil(total/q.limit)},summary:summary.rows[0]}});
+ return {status:'success',data:{applications:rows,pagination:{page:q.page,limit:q.limit,total,pages:Math.ceil(total/q.limit)},summary:summary.rows[0]}};
+ });
  }catch(e){next(e);}
 }
 router.get('/',list);
@@ -73,9 +79,11 @@ router.get('/user/:userId',list);
 router.get('/job/:jobId',list);
 router.get('/:id',async(req,res,next)=>{
  try{
- const {rows}=await pool.query(select+' WHERE a.id=$1 AND (a.user_id=$2 OR j.owner_id=$2)',[req.params.id,req.userId]);
- if(!rows.length)return fail(res,404,'Lamaran tidak ditemukan');
- res.json({status:'success',data:rows[0]});
+ const key=req.params.id.length<=50?await scope.key(scope.account(req.userId),'application:'+req.params.id):null;
+ await cachedResponse(res,key,async()=>{
+  const {rows}=await pool.query(select+' WHERE a.id=$1 AND (a.user_id=$2 OR j.owner_id=$2)',[req.params.id,req.userId]);
+  return rows.length?{status:'success',data:rows[0]}:null;
+ },'Lamaran tidak ditemukan');
  }catch(e){next(e);}
 });
 router.put('/:id',roles('employer','admin'),async(req,res,next)=>{
@@ -89,7 +97,7 @@ router.put('/:id',roles('employer','admin'),async(req,res,next)=>{
  FROM jobs j WHERE a.job_id=j.id AND a.id=$2 AND j.owner_id=$3
  AND a.status IN ('pending','reviewing','interview')
  AND a.status<>$1
- AND (a.status<>'interview' OR $1 IN ('interview','accepted','rejected')) RETURNING a.id`,[value.status,req.params.id,req.userId]);
+ AND (a.status<>'interview' OR $1 IN ('interview','accepted','rejected')) RETURNING a.id,a.user_id`,[value.status,req.params.id,req.userId]);
  if(!rows.length){
    const current=await db.query('SELECT a.status FROM applications a JOIN jobs j ON j.id=a.job_id WHERE a.id=$1 AND j.owner_id=$2',[req.params.id,req.userId]);
    if(current.rows[0]?.status===value.status){
@@ -101,6 +109,7 @@ router.put('/:id',roles('employer','admin'),async(req,res,next)=>{
  }
  await db.query('INSERT INTO application_status_outbox(id, application_id, status) VALUES($1, $2, $3)', [randomUUID(), rows[0].id, value.status]);
  await db.query('COMMIT');
+ await scope.invalidateAccounts(req.userId,rows[0].user_id);
  res.json({status:'success',data:{changed:true},message:'Status lamaran diperbarui'});
  }catch(e){
    if(db)await db.query('ROLLBACK').catch(()=>{});
@@ -111,8 +120,9 @@ router.put('/:id',roles('employer','admin'),async(req,res,next)=>{
 });
 router.delete('/:id',async(req,res,next)=>{
  try{
- const {rowCount}=await pool.query("UPDATE applications SET status='withdrawn',updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND user_id=$2 AND status IN ('pending','reviewing','interview') RETURNING id",[req.params.id,req.userId]);
+ const {rowCount,rows}=await pool.query("UPDATE applications SET status='withdrawn',updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND user_id=$2 AND status IN ('pending','reviewing','interview') RETURNING id,(SELECT owner_id FROM jobs WHERE jobs.id=applications.job_id) AS owner_id",[req.params.id,req.userId]);
  if(!rowCount)return fail(res,409,'Lamaran tidak dapat ditarik');
+ await scope.invalidateAccounts(req.userId,rows[0].owner_id);
  res.json({status:'success',message:'Lamaran ditarik. Riwayat tetap disimpan.'});
  }catch(e){next(e);}
 });

@@ -52,7 +52,7 @@ async function smoke(env,check=false){
  const health=await fetch(base+'/api/health').then(r=>r.json());assert.equal(health.demo,false);assert.equal(health.localQa,false);
  await smoke(env);
  const users=await db.query('SELECT count(*)::int AS n FROM "'+schema+'".users');assert.equal(users.rows[0].n,2,'Actual runtime must use the isolated schema');
- // Current website routes read PostgreSQL directly; the Redis cache helper is unused.
+ // Redis is optional here: cached routes fall back to PostgreSQL when it is unavailable.
  const jobs=await fetch(base+'/api/jobs').then(r=>r.json());assert.ok(jobs.data.jobs.some(j=>j.title==='Posisi Uji Persisten'));
  await stop(api);await stop(consumer);
  api=start(apiPath,env);consumer=start(consumerPath,env);await waitReady(api);await smoke(env,true);

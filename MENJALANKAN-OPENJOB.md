@@ -24,7 +24,7 @@ Port 5432/5433 adalah PostgreSQL, bukan website. Mode aplikasi biasa tidak membu
 6. Hubungkan keduanya ke RabbitMQ yang sama. Jika memakai `RABBITMQ_QUEUE_PREFIX`, nilainya wajib sama di API dan consumer. Awalan bawaan `openjob` mempertahankan nama antrean lama. Lingkungan terpisah harus memakai awalan berbeda atau broker/vhost terpisah agar pesan tidak diproses consumer lingkungan lain.
 7. Pada consumer, isi SMTP melalui `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASSWORD`, dan opsional `MAIL_FROM`. Untuk uji lokal gunakan Mailpit 127.0.0.1:1025, inbox 8025. Mailpit tidak mengirim email ke inbox asli.
 
-`compose.dev.yml` menyediakan RabbitMQ, Redis, dan Mailpit lokal. Redis helper masih ada dalam proyek, tetapi route website saat ini membaca PostgreSQL langsung; keberhasilan website bukan bukti penggunaan cache Redis. Launcher QA 3101 melakukan pemeriksaan koneksi Redis tambahan.
+`compose.dev.yml` menyediakan RabbitMQ, Redis, dan Mailpit lokal. Redis dipakai sebagai cache untuk detail perusahaan, profil akun, detail dan daftar lamaran, serta bookmark; sumber data terlihat pada header `X-Data-Source` (`cache` atau `database`). Cache hanya optimasi: jika Redis mati atau lambat, API tetap melayani dari PostgreSQL, sehingga keberhasilan website saja bukan bukti Redis aktif.
 
 ## Migrasi dan menjalankan
 

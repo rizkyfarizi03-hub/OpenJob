@@ -5,6 +5,8 @@ const pool = require("../database");
 
 const router = express.Router();
 const bookmarkQuery = require("../bookmarkQuery");
+const cachedResponse = require("../cachedResponse");
+const scope = require("../cacheScope");
 
 // Middleware Authentication & Authorization
 const verifyToken = require("../middlewares/verifyToken");
@@ -36,6 +38,7 @@ router.post("/jobs/:jobId/bookmark", ...auth, async (req, res, next) => {
        VALUES ($1, $2, $3)`,
       [id, req.userId, jobId],
     );
+    await scope.invalidateAccounts(req.userId);
 
     return res.status(201).json({
       status: "success",
@@ -89,6 +92,7 @@ router.delete("/jobs/:jobId/bookmark", ...auth, async (req, res, next) => {
     if (result.rows.length === 0) {
       return failure(res, 404, "Bookmark tidak ditemukan");
     }
+    await scope.invalidateAccounts(req.userId);
 
     return res.status(200).json({
       status: "success",
@@ -102,11 +106,15 @@ router.delete("/jobs/:jobId/bookmark", ...auth, async (req, res, next) => {
 // Lihat Semua Bookmark User yang Login
 router.get("/bookmarks", ...auth, async (req, res, next) => {
   try {
-    // Salary visibility and job status must reflect the latest employer edit.
-    const result = await pool.query(
-      `${bookmarkQuery} WHERE b.user_id=$1 ORDER BY b.created_at DESC`, [req.userId],
-    );
-    return res.json({ status: 'success', data: { bookmarks: result.rows } });
+    // Salary visibility and job status must reflect the latest employer edit:
+    // job and company changes invalidate the cache of every account that saved the job.
+    const key = await scope.key(scope.account(req.userId), 'bookmarks');
+    return await cachedResponse(res, key, async () => {
+      const result = await pool.query(
+        `${bookmarkQuery} WHERE b.user_id=$1 ORDER BY b.created_at DESC`, [req.userId],
+      );
+      return { status: 'success', data: { bookmarks: result.rows } };
+    });
   } catch (e) {
     next(e);
   }

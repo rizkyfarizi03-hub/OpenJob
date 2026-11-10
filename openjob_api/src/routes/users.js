@@ -4,6 +4,8 @@ const bcrypt=require('bcrypt');
 const {randomUUID}=require('crypto');
 const pool=require('../database');
 const verify=require('../middlewares/verifyToken');
+const cachedResponse=require('../cachedResponse');
+const scope=require('../cacheScope');
 const router=express.Router();
 const password=Joi.string().min(8).custom((v,h)=>Buffer.byteLength(v,'utf8')<=72?v:h.error('string.max',{limit:72}));
 const email=Joi.string().trim().lowercase().email();
@@ -26,9 +28,10 @@ router.post('/',async(req,res,next)=>{
 router.get('/:id',verify,async(req,res,next)=>{
  if(req.params.id!==req.userId)return fail(res,403,'Tidak memiliki akses');
  try{
- const r=await pool.query('SELECT id,name,email,role,created_at,email_verified_at FROM users WHERE id=$1',[req.userId]);
- if(!r.rowCount)return fail(res,404,'Pengguna tidak ditemukan');
- res.json({status:'success',data:r.rows[0]});
+ await cachedResponse(res,await scope.key(scope.account(req.userId),'user'),async()=>{
+  const r=await pool.query('SELECT id,name,email,role,created_at,email_verified_at FROM users WHERE id=$1',[req.userId]);
+  return r.rowCount?{status:'success',data:r.rows[0]}:null;
+ },'Pengguna tidak ditemukan');
  }catch(e){next(e);}
 });
 router.put('/:id',verify,async(req,res,next)=>{
@@ -58,6 +61,8 @@ router.put('/:id',verify,async(req,res,next)=>{
  await client.query('UPDATE password_reset_requests SET invalidated_at=NOW() WHERE user_id=$1 AND used_at IS NULL AND invalidated_at IS NULL',[req.userId]);
  }
  await client.query('COMMIT');
+ client.release();client=undefined; // invalidasi memakai pool; lepaskan koneksi transaksi dulu
+ await scope.userChanged(req.userId);
  res.json({status:'success',data:{reauthenticate:sensitive},message:'Profil berhasil diperbarui'});
  }catch(e){
  if(client)await client.query('ROLLBACK');

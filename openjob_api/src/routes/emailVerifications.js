@@ -4,6 +4,7 @@ const pool=require('../database');
 const verify=require('../middlewares/verifyToken');
 const tokens=require('../resetTokens');
 const requests=require('../verificationRequests');
+const scope=require('../cacheScope');
 const fail=(res,code,message)=>res.status(code).json({status:'failed',message});
 const attempts=new Map();
 function limited(req,res,kind){
@@ -45,7 +46,7 @@ router.post('/confirm',async(req,res,next)=>{
  await db.query('UPDATE users SET email_verified_at=NOW() WHERE id=$1',[lookup.rows[0].user_id]);
  await db.query('UPDATE email_verification_requests SET used_at=NOW() WHERE id=$1',[id]);
  await db.query('UPDATE email_verification_requests SET invalidated_at=NOW() WHERE user_id=$1 AND id<>$2 AND used_at IS NULL AND invalidated_at IS NULL',[lookup.rows[0].user_id,id]);
- await db.query('COMMIT');res.set('Cache-Control','no-store');res.json({status:'success',message:'Email berhasil diverifikasi. Anda sekarang bisa melamar atau menerbitkan lowongan.'});
+ await db.query('COMMIT');db.release();db=undefined;await scope.userChanged(lookup.rows[0].user_id);res.set('Cache-Control','no-store');res.json({status:'success',message:'Email berhasil diverifikasi. Anda sekarang bisa melamar atau menerbitkan lowongan.'});
  }catch(e){if(db)await db.query('ROLLBACK').catch(()=>{});next(e);}finally{db?.release();}
 });
 module.exports=router;

@@ -4,6 +4,7 @@ const { randomUUID } = require('crypto');
 const pool = require('../database');
 const verify = require('../middlewares/verifyToken');
 const { identity, roles } = require('../middlewares/access');
+const scope = require('../cacheScope');
 const employer = [verify, identity, roles('employer', 'admin')];
 const fail = (res, code, message) => res.status(code).json({ status: 'failed', message });
 const fields = `j.id,j.owner_id,j.company_id,j.category_id,j.title,j.description,j.job_type,
@@ -90,7 +91,7 @@ async function save(req,res,next){
  if(editing){
  const keys=Object.keys(value);
  await db.query('UPDATE jobs SET '+keys.map((k,i)=>k+'=$'+(i+1)).join(',')+' WHERE id=$'+(keys.length+1)+' AND owner_id=$'+(keys.length+2),[...Object.values(value),req.params.id,req.userId]);
- await db.query('COMMIT');res.json({status:'success',message:'Lowongan diperbarui'});
+ await db.query('COMMIT');db.release();db=undefined;await scope.jobChanged(req.params.id,req.userId);res.json({status:'success',message:'Lowongan diperbarui'});
  }else{
  const id=randomUUID(),data={id,owner_id:req.userId,...value},keys=Object.keys(data);
  await db.query('INSERT INTO jobs ('+keys.join(',')+') VALUES ('+keys.map((_,i)=>'$'+(i+1)).join(',')+')',Object.values(data));
@@ -108,8 +109,11 @@ router.delete('/:id',...employer,async(req,res,next)=>{
  try{
  const applications=await pool.query('SELECT id FROM applications WHERE job_id=$1 LIMIT 1',[req.params.id]);
  if(applications.rowCount)return fail(res,409,'Lowongan memiliki lamaran. Tutup lowongan untuk menyimpan riwayat.');
+ // Bookmark ikut terhapus bersama lowongan, jadi catat pemiliknya sebelum DELETE.
+ const saved=await scope.accountsRelatedTo('job',req.params.id);
  const result=await pool.query('DELETE FROM jobs WHERE id=$1 AND owner_id=$2 RETURNING id',[req.params.id,req.userId]);
  if(!result.rowCount)return fail(res,404,'Lowongan tidak ditemukan atau bukan milik Anda');
+ await scope.invalidateAccounts(...saved);
  res.json({status:'success',message:'Lowongan dihapus'});
  }catch(e){if(['23503','23001'].includes(e.code))return fail(res,409,'Data masih digunakan dan tidak dapat dihapus');next(e);}
 });

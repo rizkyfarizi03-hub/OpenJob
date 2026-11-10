@@ -321,3 +321,15 @@ Akun awal: `pelamar@example.com` dan `perekrut@example.com`, password keduanya `
 Data tetap ada setelah restart aplikasi maupun container PostgreSQL selama volume dipertahankan. File CV website disimpan di `openjob_api/qa-postgres-files/web_qa/documents`; secret sesi/link disimpan di `openjob_api/.qa-postgres/web-secrets.json`. Kedua lokasi diabaikan Git. Pertahankan keduanya bersama database saat memindahkan lingkungan pengujian; jangan membagikan secret. Ctrl+C menghentikan website; menjalankan launcher lagi memakai data yang sama.
 
 Validasi: `node dev/test-postgres-web.cjs` menguji website 3101 lewat HTTP dengan dua akun buatan, verifikasi dari email Mailpit, perusahaan, lowongan, unggah CV, lamaran, status reviewing, dan email status. Sesudah restart aplikasi, `node dev/test-postgres-web.cjs --check` membuktikan login ulang, status lamaran, dan unduhan PDF tetap berhasil. Browser juga membuktikan perubahan nama profil contoh tetap tersimpan setelah restart tanpa error konsol. Pengujian ini belum merupakan deployment publik atau pemindahan data produksi.
+
+## Cache Redis — 11 November 2026
+
+Enam endpoint memakai Redis kembali, dengan header `X-Data-Source: cache` atau `database`: `GET /companies/:id`, `GET /users/:id`, `GET /applications/:id`, `GET /applications/user/:userId`, `GET /applications/job/:jobId` (termasuk `GET /applications`), dan `GET /bookmarks`. Berlaku sama untuk awalan `/api`.
+
+- Data pribadi disimpan per akun, sehingga satu akun tidak pernah menerima cache akun lain. Pemeriksaan sesi, peran, dan kepemilikan tetap dijalankan sebelum cache dibaca.
+- Setiap akun dan perusahaan mempunyai versi cache (`src/cacheScope.js`). Perubahan menghapus versi itu, sehingga semua halaman dan filter ikut tidak terpakai. Masa simpan tetap satu jam.
+- Invalidasi mencakup data gabungan: perubahan lowongan atau perusahaan menyegarkan cache pemilik, pelamar, dan penyimpan bookmark; perubahan profil atau verifikasi email menyegarkan cache akun itu dan perekrut yang menerima lamarannya. Gaji yang disembunyikan langsung hilang dari bookmark.
+- Redis hanya optimasi. Jika Redis mati atau tidak menjawab dalam 500 ms, cache dilewati selama 10 detik dan data diambil dari PostgreSQL. Penghapusan yang belum sampai ke Redis dicatat di memori proses dan kuncinya tidak dilayani dari cache sampai berhasil dihapus; catatan ini hilang jika proses API direstart saat Redis mati.
+- `GET /profile/*`, daftar lowongan, dan dashboard perekrut tetap membaca PostgreSQL langsung.
+
+Pengujian: `npm run test:cache` (PGlite dan cache memori) mencakup miss, hit, invalidasi, isolasi antar akun, dan kegagalan cache. Pengujian terhadap layanan Redis sungguhan dan collection Postman belum dijalankan pada perubahan ini.

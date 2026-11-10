@@ -4,6 +4,8 @@ const {randomUUID}=require('crypto');
 const pool=require('../database');
 const verify=require('../middlewares/verifyToken');
 const {identity,roles}=require('../middlewares/access');
+const cachedResponse=require('../cachedResponse');
+const scope=require('../cacheScope');
 const employer=[verify,identity,roles('employer','admin')];
 const schema=Joi.object({name:Joi.string().trim().max(255).required(),location:Joi.string().trim().max(255).required(),description:Joi.string().max(10000).allow('')});
 const fail=(res,code,message)=>res.status(code).json({status:'failed',message});
@@ -44,7 +46,13 @@ router.get('/',async(req,res,next)=>{
  }catch(e){next(e);}
 });
 router.get('/:id',async(req,res,next)=>{
- try{const {rows}=await pool.query('SELECT id,name,location,description FROM companies WHERE id=$1',[req.params.id]);if(!rows.length)return fail(res,404,'Perusahaan tidak ditemukan');res.json({status:'success',data:rows[0]});}catch(e){next(e);}
+ try{
+  const key=req.params.id.length<=50?await scope.key(scope.company(req.params.id),'detail'):null;
+  await cachedResponse(res,key,async()=>{
+   const {rows}=await pool.query('SELECT id,name,location,description FROM companies WHERE id=$1',[req.params.id]);
+   return rows.length?{status:'success',data:rows[0]}:null;
+  },'Perusahaan tidak ditemukan');
+ }catch(e){next(e);}
 });
 router.post('/',...employer,async(req,res,next)=>{
  try{const {error,value}=schema.validate(req.body);if(error)return fail(res,400,error.details[0].message);
@@ -55,7 +63,9 @@ router.post('/',...employer,async(req,res,next)=>{
 router.put('/:id',...employer,async(req,res,next)=>{
  try{const {error,value}=schema.fork(['name','location'],f=>f.optional()).min(1).validate(req.body);if(error)return fail(res,400,error.details[0].message);
  const result=await pool.query('UPDATE companies SET name=COALESCE($1,name),location=COALESCE($2,location),description=COALESCE($3,description) WHERE id=$4 AND owner_id=$5 RETURNING id',[value.name??null,value.location??null,value.description??null,req.params.id,req.userId]);
- if(!result.rowCount)return fail(res,404,'Perusahaan tidak ditemukan atau bukan milik Anda');res.json({status:'success',message:'Perusahaan diperbarui'});
+ if(!result.rowCount)return fail(res,404,'Perusahaan tidak ditemukan atau bukan milik Anda');
+ await scope.companyChanged(req.params.id,req.userId);
+ res.json({status:'success',message:'Perusahaan diperbarui'});
  }catch(e){next(e);}
 });
 router.delete('/:id',...employer,async(req,res,next)=>{
@@ -63,7 +73,9 @@ router.delete('/:id',...employer,async(req,res,next)=>{
  const jobs=await pool.query('SELECT id FROM jobs WHERE company_id=$1 LIMIT 1',[req.params.id]);
  if(jobs.rowCount)return fail(res,409,'Perusahaan masih memiliki lowongan');
  const result=await pool.query('DELETE FROM companies WHERE id=$1 AND owner_id=$2 RETURNING id',[req.params.id,req.userId]);
- if(!result.rowCount)return fail(res,404,'Perusahaan tidak ditemukan atau bukan milik Anda');res.json({status:'success',message:'Perusahaan dihapus'});
+ if(!result.rowCount)return fail(res,404,'Perusahaan tidak ditemukan atau bukan milik Anda');
+ await scope.invalidate(scope.company(req.params.id));
+ res.json({status:'success',message:'Perusahaan dihapus'});
  }catch(e){if(['23503','23001'].includes(e.code))return fail(res,409,'Data masih digunakan dan tidak dapat dihapus');next(e);}
 });
 module.exports=router;
