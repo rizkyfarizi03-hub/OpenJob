@@ -25,13 +25,13 @@ Consumer menjalankan proses tersendiri dari `../openjob_consumer`. **Tidak ada i
 - `npm run publisher`: jalankan outbox dispatcher saja, **alternatif** untuk mode API yang tidak otomatis menyalakan publisher. Jangan jalankan publisher terpisah kecuali diperlukan.
 - `npm run migrate`: jalankan migrasi PostgreSQL.
 - `npm run test:unit`: pengujian publisher/queue dengan mock tanpa layanan eksternal.
-- `npm test`: 25 tes API/publisher dan integrasi dengan PGlite sementara; tidak memerlukan PostgreSQL asli atau port 3000. Postman lama tersedia melalui `npm run test:legacy`.
+- `npm test`: 32 tes API/publisher dan integrasi dengan PGlite sementara; tidak memerlukan PostgreSQL asli atau port 3000. Postman lama tersedia melalui `npm run test:legacy`.
 - `npm run test:normal-start`: uji kode utama API dan consumer sebagai proses terpisah pada PostgreSQL Docker QA, tanpa mock modul; membutuhkan PostgreSQL QA, RabbitMQ, dan Mailpit lokal serta port 3102 kosong.
 
 ## Penting saat menguji
 
-- Route website memakai PostgreSQL langsung; helper Redis belum dipakai oleh route saat ini. Untuk email gunakan `openjob_consumer`, RabbitMQ, serta SMTP seperti Mailpit.
+- Enam endpoint memakai cache Redis dengan header `X-Data-Source` (lihat bagian cache di `../WEBSITE.md`); tanpa Redis, API tetap berjalan dari PostgreSQL. Untuk email gunakan `openjob_consumer`, RabbitMQ, serta SMTP seperti Mailpit.
 - Untuk run penuh dari collection Postman V2, gunakan database pengujian baru (collection memakai beberapa email statis). Jangan ubah assertion agar tampak lulus.
 - Folder `tests/fixtures/` berisi collection Postman yang tersedia pada ZIP semula. Pengujian upload Documents memerlukan request multipart/form-data manual.
 - Tidak menyertakan `.env` sungguhan, file CV, atau `node_modules`.
-- Baca `../README.md` untuk panduan Docker, konfigurasi kedua project, dan tes email end-to-end.
+- Baca `../docs/SUBMISSION-V2.md` untuk panduan Docker, konfigurasi kedua project, dan tes email end-to-end.
