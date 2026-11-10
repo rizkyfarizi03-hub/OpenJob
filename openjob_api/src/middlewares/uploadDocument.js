@@ -3,7 +3,9 @@ const path = require("path");
 const fs = require("fs");
 const { randomUUID } = require("crypto");
 
-const uploadDirectory = process.env.OPENJOB_UPLOAD_DIRECTORY || path.resolve(__dirname, "../../uploads/documents");
+const uploadDirectory =
+  process.env.OPENJOB_UPLOAD_DIRECTORY ||
+  path.resolve(__dirname, "../../uploads/documents");
 
 fs.mkdirSync(uploadDirectory, { recursive: true });
 

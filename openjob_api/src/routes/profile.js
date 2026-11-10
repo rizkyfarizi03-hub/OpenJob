@@ -75,4 +75,3 @@ router.get("/bookmarks", async (req, res, next) => {
 });
 
 module.exports = router;
-

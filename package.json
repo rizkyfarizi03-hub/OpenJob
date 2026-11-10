@@ -1,0 +1,16 @@
+{
+  "name": "openjob",
+  "private": true,
+  "description": "Perkakas format dan lint untuk seluruh proyek OpenJob",
+  "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.14.0",
+    "globals": "^17.14.0",
+    "prettier": "^3.9.10"
+  }
+}

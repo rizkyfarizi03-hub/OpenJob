@@ -14,7 +14,8 @@ test("publisher pushes application id once with durable queue and persistent mes
           return { rows: outbox.filter((r) => !r.published_at) };
         }
         if (query.startsWith("UPDATE application_outbox")) {
-          outbox.find((r) => r.application_id === params[0]).published_at = new Date();
+          outbox.find((r) => r.application_id === params[0]).published_at =
+            new Date();
         }
         return { rows: [], rowCount: 1 };
       },
@@ -24,7 +25,9 @@ test("publisher pushes application id once with durable queue and persistent mes
   let asserted;
   const channel = {
     on() {},
-    assertQueue: async (name, options) => { asserted = { name, options }; },
+    assertQueue: async (name, options) => {
+      asserted = { name, options };
+    },
     sendToQueue: (queue, body, options, callback) => {
       sent.push({ queue, body: JSON.parse(body.toString()), options });
       callback(null);
@@ -35,12 +38,18 @@ test("publisher pushes application id once with durable queue and persistent mes
     "./database": pool,
     "./rabbit": {
       QUEUE: "openjob.application.created",
-      connect: async () => ({ createConfirmChannel: async () => channel, close: async () => {} }),
+      connect: async () => ({
+        createConfirmChannel: async () => channel,
+        close: async () => {},
+      }),
     },
   });
   await dispatch();
   await dispatch();
-  assert.deepEqual(asserted, { name: "openjob.application.created", options: { durable: true } });
+  assert.deepEqual(asserted, {
+    name: "openjob.application.created",
+    options: { durable: true },
+  });
   assert.equal(sent.length, 1);
   assert.deepEqual(sent[0].body, { application_id: "application-123" });
   assert.equal(sent[0].options.persistent, true);
@@ -56,7 +65,14 @@ test("publisher and consumer share the same queue name", () => {
 });
 
 test("publisher pushes application status change to status queue with durable queue and persistent message", async () => {
-  const statusOutbox = [{ id: "status-outbox-1", application_id: "application-123", status: "interview", published_at: null }];
+  const statusOutbox = [
+    {
+      id: "status-outbox-1",
+      application_id: "application-123",
+      status: "interview",
+      published_at: null,
+    },
+  ];
   const sent = [];
   const asserted = [];
   const pool = {
@@ -65,11 +81,14 @@ test("publisher pushes application status change to status queue with durable qu
         if (query.startsWith("SELECT application_id")) {
           return { rows: [] };
         }
-        if (query.includes("application_status_outbox WHERE published_at IS NULL")) {
+        if (
+          query.includes("application_status_outbox WHERE published_at IS NULL")
+        ) {
           return { rows: statusOutbox.filter((r) => !r.published_at) };
         }
         if (query.startsWith("UPDATE application_status_outbox")) {
-          statusOutbox.find((r) => r.id === params[0]).published_at = new Date();
+          statusOutbox.find((r) => r.id === params[0]).published_at =
+            new Date();
         }
         return { rows: [], rowCount: 1 };
       },
@@ -78,7 +97,9 @@ test("publisher pushes application status change to status queue with durable qu
   };
   const channel = {
     on() {},
-    assertQueue: async (name, options) => { asserted.push({ name, options }); },
+    assertQueue: async (name, options) => {
+      asserted.push({ name, options });
+    },
     sendToQueue: (queue, body, options, callback) => {
       sent.push({ queue, body: JSON.parse(body.toString()), options });
       callback(null);
@@ -90,13 +111,20 @@ test("publisher pushes application status change to status queue with durable qu
     "./rabbit": {
       QUEUE: "openjob.application.created",
       STATUS_QUEUE: "openjob.application.status_changed",
-      connect: async () => ({ createConfirmChannel: async () => channel, close: async () => {} }),
+      connect: async () => ({
+        createConfirmChannel: async () => channel,
+        close: async () => {},
+      }),
     },
   });
   await dispatch();
   assert.equal(sent.length, 1);
   assert.equal(sent[0].queue, "openjob.application.status_changed");
-  assert.deepEqual(sent[0].body, { id: "status-outbox-1", application_id: "application-123", status: "interview" });
+  assert.deepEqual(sent[0].body, {
+    id: "status-outbox-1",
+    application_id: "application-123",
+    status: "interview",
+  });
   assert.equal(sent[0].options.persistent, true);
   assert.ok(statusOutbox[0].published_at);
 });

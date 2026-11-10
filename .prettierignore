@@ -1,0 +1,10 @@
+node_modules/
+package-lock.json
+*.md
+*.html
+*.yml
+openjob_api/.qa-postgres/
+openjob_api/qa-postgres-files/
+openjob_api/uploads/
+openjob_api/tests/fixtures/
+openjob_api/tests/last-result.json

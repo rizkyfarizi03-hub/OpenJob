@@ -1,7 +1,7 @@
 require("dotenv").config();
 
 const express = require("express");
-const path = require('path');
+const path = require("path");
 
 const usersRoutes = require("./routes/users");
 const authenticationsRoutes = require("./routes/authentications");
@@ -17,33 +17,58 @@ const app = express();
 
 // Middleware JSON
 app.use(express.json());
-app.disable('x-powered-by');
-app.use((req,res,next) => {
-  res.set('X-Content-Type-Options','nosniff');
-  res.set('Referrer-Policy','same-origin');
-  res.set('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'");
-  if (req.headers.authorization) res.set('Cache-Control','no-store');
+app.disable("x-powered-by");
+app.use((req, res, next) => {
+  res.set("X-Content-Type-Options", "nosniff");
+  res.set("Referrer-Policy", "same-origin");
+  res.set(
+    "Content-Security-Policy",
+    "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'",
+  );
+  if (req.headers.authorization) res.set("Cache-Control", "no-store");
   next();
 });
 const api = express.Router();
-api.use('/users',usersRoutes);
-api.use('/authentications',authenticationsRoutes);
-api.use('/password-resets',require('./routes/passwordResets'));
-api.use('/email-verifications',require('./routes/emailVerifications'));
-api.use('/companies',companiesRoutes);
-api.use('/categories',categoriesRoutes);
-api.use('/jobs',jobsRoutes);
-api.use('/applications',applicationsRoutes);
-api.use('/profile',profileRoutes);
-api.use('/documents',documentsRoutes);
-api.use('/',bookmarksRoutes);
-api.get('/health',(req,res)=>{res.set('Cache-Control','no-store');res.json({status:'success',demo:process.env.OPENJOB_DEMO==='1',localQa:process.env.OPENJOB_LOCAL_QA==='1',features:{passwordReset:true,emailVerification:true,demoMail:process.env.OPENJOB_DEMO_MAIL==='1'}});});
-api.use((req,res)=>res.status(404).json({status:'failed',message:'Endpoint tidak ditemukan'}));
-app.use('/api',api);
-app.use('/assets',express.static(path.resolve(__dirname,'../../openjob_web/assets'),{
-  setHeaders:res=>res.set('Cache-Control','no-cache'),
-}));
-app.get('/',(req,res)=>{res.set('Cache-Control','no-store');res.sendFile(path.resolve(__dirname,'../../openjob_web/index.html'));});
+api.use("/users", usersRoutes);
+api.use("/authentications", authenticationsRoutes);
+api.use("/password-resets", require("./routes/passwordResets"));
+api.use("/email-verifications", require("./routes/emailVerifications"));
+api.use("/companies", companiesRoutes);
+api.use("/categories", categoriesRoutes);
+api.use("/jobs", jobsRoutes);
+api.use("/applications", applicationsRoutes);
+api.use("/profile", profileRoutes);
+api.use("/documents", documentsRoutes);
+api.use("/", bookmarksRoutes);
+api.get("/health", (req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({
+    status: "success",
+    demo: process.env.OPENJOB_DEMO === "1",
+    localQa: process.env.OPENJOB_LOCAL_QA === "1",
+    features: {
+      passwordReset: true,
+      emailVerification: true,
+      demoMail: process.env.OPENJOB_DEMO_MAIL === "1",
+    },
+  });
+});
+api.use((req, res) =>
+  res
+    .status(404)
+    .json({ status: "failed", message: "Endpoint tidak ditemukan" }),
+);
+app.use("/api", api);
+app.use(
+  "/assets",
+  express.static(path.resolve(__dirname, "../../openjob_web/assets"), {
+    setHeaders: (res) => res.set("Cache-Control", "no-cache"),
+  }),
+);
+app.get("/", (req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.sendFile(path.resolve(__dirname, "../../openjob_web/index.html"));
+});
 
 // Routes Documents
 app.use("/documents", documentsRoutes);
@@ -111,11 +136,10 @@ const PORT = process.env.PORT || 3000;
 
 // Menjalankan HTTP Server
 if (require.main === module) {
-  require('./documentCleanup').start();
+  require("./documentCleanup").start();
   app.listen(PORT, HOST, () => {
     console.log(`Server berjalan di http://${HOST}:${PORT}`);
     require("./publisher").start().catch(console.error);
   });
 }
 module.exports = app;
-

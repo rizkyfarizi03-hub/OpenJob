@@ -1,4 +1,4 @@
-exports.up = pgm => {
+exports.up = (pgm) => {
   pgm.sql(`CREATE UNIQUE INDEX users_email_normalized ON users (lower(trim(email)));
     UPDATE users SET email=lower(trim(email));
     CREATE TABLE auth_sessions (
@@ -8,4 +8,5 @@ exports.up = pgm => {
     CREATE INDEX auth_sessions_user ON auth_sessions(user_id);
     DELETE FROM authentications;`);
 };
-exports.down = pgm => pgm.sql('DROP TABLE auth_sessions; DROP INDEX users_email_normalized;');
+exports.down = (pgm) =>
+  pgm.sql("DROP TABLE auth_sessions; DROP INDEX users_email_normalized;");

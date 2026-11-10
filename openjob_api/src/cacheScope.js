@@ -111,6 +111,7 @@ module.exports = {
   invalidateAccounts,
   accountsRelatedTo,
   jobChanged: (jobId, ownerId) => changed("job", jobId, ownerId),
-  companyChanged: (companyId, ownerId) => changed("company", companyId, ownerId),
+  companyChanged: (companyId, ownerId) =>
+    changed("company", companyId, ownerId),
   userChanged: (userId) => changed("user", userId, userId),
 };

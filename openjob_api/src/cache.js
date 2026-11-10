@@ -38,7 +38,9 @@ module.exports = {
 
   async set(key, value) {
     const redis = await getClient();
-    await redis.set(`openjob:web-v1:${key}`, JSON.stringify(value), { EX: 3600 });
+    await redis.set(`openjob:web-v1:${key}`, JSON.stringify(value), {
+      EX: 3600,
+    });
   },
 
   async delete(...keys) {

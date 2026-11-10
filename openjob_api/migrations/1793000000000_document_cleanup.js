@@ -1,4 +1,5 @@
-exports.up = pgm => pgm.sql(`
+exports.up = (pgm) =>
+  pgm.sql(`
   UPDATE jobs SET location_type='on-site' WHERE lower(trim(location_type)) IN ('onsite','on_site','on-site');
   CREATE TABLE document_file_cleanup (filename text PRIMARY KEY, created_at timestamptz NOT NULL DEFAULT NOW());
   CREATE FUNCTION queue_document_file_cleanup() RETURNS trigger AS $$
@@ -10,5 +11,6 @@ exports.up = pgm => pgm.sql(`
     FOR EACH ROW EXECUTE FUNCTION queue_document_file_cleanup();
 `);
 // Normalized location values intentionally remain canonical on rollback.
-exports.down = pgm => pgm.sql(`DROP TRIGGER document_file_cleanup_trigger ON documents;
+exports.down = (pgm) =>
+  pgm.sql(`DROP TRIGGER document_file_cleanup_trigger ON documents;
   DROP FUNCTION queue_document_file_cleanup(); DROP TABLE document_file_cleanup;`);

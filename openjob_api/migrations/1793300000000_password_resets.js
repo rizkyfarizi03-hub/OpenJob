@@ -1,4 +1,5 @@
-exports.up=pgm=>pgm.sql(`CREATE TABLE password_reset_requests (
+exports.up = (pgm) =>
+  pgm.sql(`CREATE TABLE password_reset_requests (
  id uuid PRIMARY KEY,user_id varchar(50) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
  email varchar(255) NOT NULL,token_hash text NOT NULL,created_at timestamptz NOT NULL DEFAULT NOW(),
  expires_at timestamptz NOT NULL,used_at timestamptz,invalidated_at timestamptz,
@@ -8,4 +9,4 @@ exports.up=pgm=>pgm.sql(`CREATE TABLE password_reset_requests (
  CREATE INDEX password_reset_user ON password_reset_requests(user_id);
  CREATE INDEX password_reset_ready ON password_reset_requests(next_attempt_at)
  WHERE published_at IS NULL AND notified_at IS NULL AND failed_at IS NULL AND used_at IS NULL AND invalidated_at IS NULL;`);
-exports.down=pgm=>pgm.sql('DROP TABLE password_reset_requests;');
+exports.down = (pgm) => pgm.sql("DROP TABLE password_reset_requests;");

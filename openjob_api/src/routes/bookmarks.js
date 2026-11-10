@@ -11,7 +11,7 @@ const scope = require("../cacheScope");
 // Middleware Authentication & Authorization
 const verifyToken = require("../middlewares/verifyToken");
 const { identity, roles } = require("../middlewares/access");
-const auth = [verifyToken, identity, roles('user')];
+const auth = [verifyToken, identity, roles("user")];
 
 const failure = (res, code, message) => {
   return res.status(code).json({
@@ -108,16 +108,16 @@ router.get("/bookmarks", ...auth, async (req, res, next) => {
   try {
     // Salary visibility and job status must reflect the latest employer edit:
     // job and company changes invalidate the cache of every account that saved the job.
-    const key = await scope.key(scope.account(req.userId), 'bookmarks');
+    const key = await scope.key(scope.account(req.userId), "bookmarks");
     return await cachedResponse(res, key, async () => {
       const result = await pool.query(
-        `${bookmarkQuery} WHERE b.user_id=$1 ORDER BY b.created_at DESC`, [req.userId],
+        `${bookmarkQuery} WHERE b.user_id=$1 ORDER BY b.created_at DESC`,
+        [req.userId],
       );
-      return { status: 'success', data: { bookmarks: result.rows } };
+      return { status: "success", data: { bookmarks: result.rows } };
     });
   } catch (e) {
     next(e);
   }
 });
 module.exports = router;
-

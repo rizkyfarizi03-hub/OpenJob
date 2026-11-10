@@ -6,10 +6,14 @@ const pool = require("../database");
 const validate = require("../middlewares/validate");
 
 const router = express.Router();
-const { identity, roles } = require('../middlewares/access');
-router.use((req,res,next) => {
-  if (req.method === 'GET') return next();
-  require('../middlewares/verifyToken')(req,res,(error) => error ? next(error) : identity(req,res,() => roles('admin')(req,res,next)));
+const { identity, roles } = require("../middlewares/access");
+router.use((req, res, next) => {
+  if (req.method === "GET") return next();
+  require("../middlewares/verifyToken")(req, res, (error) =>
+    error
+      ? next(error)
+      : identity(req, res, () => roles("admin")(req, res, next)),
+  );
 });
 
 // Middleware Authentication
@@ -141,11 +145,15 @@ router.delete("/:id", verifyToken, async (req, res, next) => {
       message: "Category berhasil dihapus",
     });
   } catch (error) {
-    if (['23503','23001'].includes(error.code)) return res.status(409).json({status:'failed',message:'Kategori masih digunakan oleh lowongan'});
+    if (["23503", "23001"].includes(error.code))
+      return res
+        .status(409)
+        .json({
+          status: "failed",
+          message: "Kategori masih digunakan oleh lowongan",
+        });
     next(error);
   }
 });
 
 module.exports = router;
-
-
