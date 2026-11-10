@@ -1,0 +1,31 @@
+
+{
+  "name": "openjob-consumer",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Independent RabbitMQ consumer to email OpenJob application notifications",
+  "main": "src/consumer.js",
+  "scripts": {
+    "start": "node src/consumer.js",
+    "start:dev": "node --watch src/consumer.js",
+    "test": "node --test tests/consumer.unit.test.cjs"
+  },
+  "keywords": [
+    "openjob",
+    "rabbitmq",
+    "consumer",
+    "nodemailer",
+    "postgresql"
+  ],
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "amqplib": "^2.2.0",
+    "dotenv": "^18.0.8",
+    "nodemailer": "^10.2.1",
+    "pg": "^8.23.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

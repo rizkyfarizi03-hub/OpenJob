@@ -1,0 +1,32 @@
+# Services for local development only. PostgreSQL is expected to run locally.
+services:
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    ports:
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: openjob
+      RABBITMQ_DEFAULT_PASS: openjob_local_2026
+    volumes:
+      - openjob_rabbit_data:/var/lib/rabbitmq
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:6379:6379"
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+    restart: unless-stopped
+
+volumes:
+  openjob_rabbit_data:

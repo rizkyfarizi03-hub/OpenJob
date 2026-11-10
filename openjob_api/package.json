@@ -1,0 +1,59 @@
+{
+  "name": "openjob-api",
+  "version": "2.0.0",
+  "description": "OpenJob RESTful API V2 (publisher RabbitMQ, PostgreSQL, Redis)",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "start:dev": "nodemon src/server.js",
+    "publisher": "node src/publisher.js",
+    "migrate": "node-pg-migrate up --envPath .env",
+    "demo": "node dev/preview.cjs",
+    "demo:mail": "node dev/preview-mail.cjs",
+    "qa:web": "node dev/preview-postgres.cjs",
+    "qa:postgres:up": "node dev/postgresDocker.cjs && node dev/postgresQa.cjs",
+    "test:postgres": "node --require ./dev/postgresQa.cjs --test --test-concurrency=1 tests/website.integration.cjs tests/notifications.integration.cjs tests/passwordResets.integration.cjs tests/emailVerifications.integration.cjs",
+    "test:postgres:mail": "node --require ./dev/postgresQa.cjs dev/test-notifications-live.cjs",
+    "test:normal-start": "node dev/test-normal-start.cjs",
+    "test:boundaries": "node --require ./dev/postgresQa.cjs --test tests/accessBoundaries.integration.cjs",
+    "qa:backup": "node dev/backup-postgres.cjs --backup-only",
+    "test:restore": "node dev/backup-postgres.cjs",
+    "test": "node --test --test-concurrency=1 tests/broker.unit.test.cjs tests/website.integration.cjs tests/notifications.integration.cjs tests/passwordResets.integration.cjs tests/emailVerifications.integration.cjs",
+    "test:email-verification": "node --test tests/emailVerifications.integration.cjs",
+    "test:password-resets": "node --test tests/passwordResets.integration.cjs",
+    "test:notifications": "node --test tests/notifications.integration.cjs",
+    "test:notifications:live": "node dev/test-notifications-live.cjs",
+    "test:website": "node --test tests/website.integration.cjs",
+    "test:legacy": "node tests/integration.cjs",
+    "test:unit": "node --test tests/broker.unit.test.cjs"
+  },
+  "keywords": [
+    "openjob",
+    "rest-api",
+    "express",
+    "postgresql",
+    "rabbitmq",
+    "redis"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "amqplib": "^2.2.0",
+    "bcrypt": "^6.0.0",
+    "dotenv": "^18.0.8",
+    "express": "^5.3.0",
+    "joi": "^18.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.5.0",
+    "node-pg-migrate": "^9.0.0",
+    "pdf-lib": "1.17.1",
+    "pg": "^8.23.1",
+    "redis": "^6.3.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.11",
+    "newman": "^6.2.3",
+    "nodemon": "^3.1.14"
+  }
+}

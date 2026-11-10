@@ -1,0 +1,82 @@
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const {createSandbox,seed}=require('../dev/sandbox.cjs');
+const load=require('./loadWithMocks.cjs');
+test('email verification: unverified preparation, publishing gates, token lifecycle and changed email',async t=>{
+ const sandbox=await createSandbox();await seed(sandbox.pool);process.env.OPENJOB_DEMO='0';
+ const app=require('../src/server');
+ const server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));});
+ const base='http://127.0.0.1:'+server.address().port;process.env.WEB_BASE_URL=base;
+ t.after(async()=>{await new Promise(r=>server.close(r));await sandbox.close();});
+ async function call(path,body,method='POST',token){
+ const response=await fetch(base+'/api'+path,{method,headers:{...(body instanceof FormData?{}:{'Content-Type':'application/json'}),...(token?{Authorization:'Bearer '+token}:{})},body:body instanceof FormData?body:body?JSON.stringify(body):undefined});
+ return {code:response.status,body:await response.json()};
+ }
+ async function account(name,role){
+ const email=name+'@example.com',password='VerificationTest123!';
+ const registered=await call('/users',{name,email,password,role});assert.equal(registered.code,201);assert.equal(registered.body.data.verificationQueued,true);
+ const login=await call('/authentications',{email,password});assert.equal(login.code,200);
+ return {id:registered.body.data.id,email,password,token:login.body.data.accessToken};
+ }
+ async function latest(user){return (await sandbox.pool.query('SELECT * FROM email_verification_requests WHERE user_id=$1 ORDER BY created_at DESC',[user.id])).rows[0];}
+ const candidate=await account('verification-candidate','user'),employer=await account('verification-employer','employer');
+ assert.equal((await call('/profile',null,'GET',candidate.token)).body.data.email_verified_at,null);
+ assert.equal((await call('/users/'+candidate.id,{name:'Updated Before Verification'},'PUT',candidate.token)).code,200);
+ const pdf=await require('pdf-lib').PDFDocument.create();pdf.addPage().drawText('Verification CV');
+ const form=new FormData();form.append('document',new Blob([await pdf.save()],{type:'application/pdf'}),'cv.pdf');
+ const uploaded=await call('/documents',form,'POST',candidate.token);assert.equal(uploaded.code,201);
+ assert.equal((await call('/documents',null,'GET',candidate.token)).body.data.documents.length,1);
+ const application={job_id:'demo-job-1',document_id:uploaded.body.data.documentId};
+ const blocked=await call('/applications',application,'POST',candidate.token);
+ assert.equal(blocked.code,403);assert.equal(blocked.body.code,'EMAIL_VERIFICATION_REQUIRED');
+ const company=await call('/companies',{name:'New Company',location:'Jakarta'},'POST',employer.token);assert.equal(company.code,201);
+ const job={company_id:company.body.data.id,category_id:'category-technology',title:'Verified publishing test',description:'Test',job_type:'full-time',experience_level:'junior',location_type:'remote'};
+ assert.equal((await call('/jobs',job,'POST',employer.token)).code,403);
+ const draft=await call('/jobs',{...job,status:'close'},'POST',employer.token);assert.equal(draft.code,201);
+ assert.equal((await call('/jobs/'+draft.body.data.id,{status:'open'},'PUT',employer.token)).code,403);
+ assert.equal((await call('/email-verifications',{})).code,401);
+ await call('/email-verifications',{},'POST',candidate.token);
+ assert.equal((await sandbox.pool.query('SELECT id FROM email_verification_requests WHERE user_id=$1',[candidate.id])).rowCount,1);
+ const sent=[],emails=[];
+ const rabbit={QUEUE:'created',STATUS_QUEUE:'status',RESET_QUEUE:'reset',VERIFY_QUEUE:'verify'};
+ const publisher=load('../src/publisher.js',{dotenv:{config(){}},'./database':sandbox.pool,'./rabbit':rabbit});
+ const consumer=load('../../openjob_consumer/src/consumer.js',{dotenv:{config(){}},nodemailer:{},'./database':sandbox.pool,'./rabbit':rabbit,'./resetLink':require('../../openjob_consumer/src/resetLink')});
+ const channel={sendToQueue(queue,content,options,cb){sent.push({queue,content});cb(null);}};
+ await publisher.dispatch(channel);assert.equal(sent.length,2);assert.ok(sent.every(m=>m.queue==='verify'));
+ for(const message of sent)await consumer.notifyVerification(message,{sendMail:async m=>emails.push(m)});
+ assert.equal(emails.length,2);
+ const mail=emails.find(m=>m.to===candidate.email);assert.ok(mail);assert.equal(mail.subject,'Verifikasi email akun OpenJob');
+ const url=new URL(mail.text.match(/http[^\s]+/)[0]);assert.equal(url.origin,base);
+ const token=new URLSearchParams(url.hash.split('?')[1]).get('token'),tokens=require('../src/resetTokens'),request=await latest(candidate);
+ assert.equal(request.token_hash,tokens.hash(token));assert.notEqual(request.token_hash,token);
+ assert.ok(new Date(request.expires_at)-new Date(request.created_at)>=23*3600000);
+ assert.equal((await call('/email-verifications/confirm',{token:tokens.tokenFor(request.id)})).code,400);
+ assert.equal((await call('/password-resets/confirm',{token,password:'DoNotChange123!'})).code,400);
+ const confirmations=await Promise.all([call('/email-verifications/confirm',{token}),call('/email-verifications/confirm',{token})]);
+ assert.deepEqual(confirmations.map(r=>r.code).sort(),[200,400]);
+ assert.ok((await call('/profile',null,'GET',candidate.token)).body.data.email_verified_at);
+ assert.equal((await call('/applications',application,'POST',candidate.token)).code,201);
+ const employerRequest=await latest(employer),expiredToken=tokens.tokenFor(employerRequest.id,'email-verification');
+ await sandbox.pool.query("UPDATE email_verification_requests SET expires_at=NOW()-INTERVAL '1 second',created_at=NOW()-INTERVAL '2 minutes' WHERE id=$1",[employerRequest.id]);
+ assert.equal((await call('/email-verifications/confirm',{token:expiredToken})).code,400);
+ assert.equal((await call('/email-verifications',{},'POST',employer.token)).code,202);
+ const resend=await latest(employer);assert.notEqual(resend.id,employerRequest.id);
+ assert.equal((await call('/email-verifications/confirm',{token:tokens.tokenFor(resend.id,'email-verification')})).code,200);
+ assert.equal((await call('/jobs/'+draft.body.data.id,{status:'open'},'PUT',employer.token)).code,200);
+ assert.equal((await call('/jobs',job,'POST',employer.token)).code,201);
+ assert.equal((await call('/users/'+candidate.id,{email:'changed-verification@example.com',current_password:candidate.password},'PUT',candidate.token)).code,200);
+ assert.equal((await call('/profile',null,'GET',candidate.token)).code,401);
+ const changedLogin=await call('/authentications',{email:'changed-verification@example.com',password:candidate.password});
+ assert.equal(changedLogin.code,200);
+ const newAccess=changedLogin.body.data.accessToken;
+ assert.equal((await call('/profile',null,'GET',newAccess)).body.data.email_verified_at,null);
+ const pending=await latest(candidate);assert.equal(pending.email,'changed-verification@example.com');
+ assert.equal((await call('/applications',{...application,job_id:'demo-job-2'},'POST',newAccess)).code,403);
+ assert.equal((await call('/email-verifications/confirm',{token})).code,400);
+ assert.equal((await call('/email-verifications/confirm',{token:tokens.tokenFor(pending.id,'email-verification')})).code,200);
+ const saved=process.env.PASSWORD_RESET_KEY;delete process.env.PASSWORD_RESET_KEY;
+ const noConfig=await call('/users',{name:'No configuration',email:'verification-unconfigured@example.com',password:candidate.password});
+ assert.equal(noConfig.code,201);assert.equal(noConfig.body.data.verificationQueued,false);
+ process.env.PASSWORD_RESET_KEY=saved;
+});
+

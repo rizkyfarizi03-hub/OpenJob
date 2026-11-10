@@ -1,0 +1,7 @@
+node_modules/
+.env
+uploads/documents/*
+!uploads/documents/.gitkeep
+tests/last-result.json
+.qa-postgres/
+qa-postgres-files/
