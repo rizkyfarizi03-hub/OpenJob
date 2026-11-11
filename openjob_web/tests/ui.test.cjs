@@ -100,6 +100,18 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   await go("#/jobs?page=2");
   assert.ok(cardFor("Product Designer").textContent.includes("1 minggu lalu"));
   assert.equal(cardFor("Product Designer").querySelector(".tag.new"), null);
+  // Logo perusahaan menggantikan inisial pada kartu.
+  await sb.pool.query(
+    "UPDATE companies SET logo_updated_at=NOW() WHERE id='nusa-digital'",
+  );
+  await go("#/jobs?title=Frontend");
+  assert.match(
+    $(".job-card img.company-avatar.logo").getAttribute("src"),
+    /^\/api\/companies\/nusa-digital\/logo\?v=\d+$/,
+  );
+  await go("#/jobs?title=Backend");
+  assert.equal($(".job-card img.company-avatar"), null);
+  assert.ok($(".job-card div.company-avatar"));
   // Filter waktu tayang dan jumlah pelamar.
   await go("#/jobs?posted=7");
   assert.ok(text(".results-head").startsWith("8 lowongan"));

@@ -6,6 +6,26 @@ const verify = require("../middlewares/verifyToken");
 const { identity, roles } = require("../middlewares/access");
 const cachedResponse = require("../cachedResponse");
 const scope = require("../cacheScope");
+const multer = require("multer");
+const LOGO_BYTES = 512 * 1024;
+const logoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: LOGO_BYTES, files: 1 },
+}).single("logo");
+// Jenis gambar ditentukan dari isi berkas, bukan dari nama atau tipe kiriman browser.
+function imageType(bytes) {
+  if (bytes.length < 12) return null;
+  if (bytes.subarray(0, 8).equals(Buffer.from("89504e470d0a1a0a", "hex")))
+    return "image/png";
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff)
+    return "image/jpeg";
+  if (
+    bytes.subarray(0, 4).toString("latin1") === "RIFF" &&
+    bytes.subarray(8, 12).toString("latin1") === "WEBP"
+  )
+    return "image/webp";
+  return null;
+}
 const employer = [verify, identity, roles("employer", "admin")];
 const schema = Joi.object({
   name: Joi.string().trim().max(255).required(),
@@ -54,7 +74,7 @@ router.get("/", async (req, res, next) => {
       values,
     );
     const { rows } = await pool.query(
-      `SELECT id,name,location,description FROM companies${clause} ORDER BY name LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
+      `SELECT id,name,location,description,logo_updated_at FROM companies${clause} ORDER BY name LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
       [...values, q.limit, (q.page - 1) * q.limit],
     );
     res.json({
@@ -84,7 +104,7 @@ router.get("/:id", async (req, res, next) => {
       key,
       async () => {
         const { rows } = await pool.query(
-          "SELECT id,name,location,description FROM companies WHERE id=$1",
+          "SELECT id,name,location,description,logo_updated_at FROM companies WHERE id=$1",
           [req.params.id],
         );
         return rows.length ? { status: "success", data: rows[0] } : null;
@@ -153,6 +173,101 @@ router.delete("/:id", ...employer, async (req, res, next) => {
   } catch (e) {
     if (["23503", "23001"].includes(e.code))
       return fail(res, 409, "Data masih digunakan dan tidak dapat dihapus");
+    next(e);
+  }
+});
+router.get("/:id/logo", async (req, res, next) => {
+  try {
+    const { rows } = await pool.query(
+      "SELECT mime_type,data FROM company_logos WHERE company_id=$1",
+      [req.params.id],
+    );
+    if (!rows.length) return fail(res, 404, "Logo tidak ditemukan");
+    res.set({
+      "Content-Type": rows[0].mime_type,
+      "Content-Disposition": "inline",
+      "Content-Security-Policy": "default-src 'none'",
+      // Alamat logo memuat versi, jadi salinan berversi aman disimpan lama.
+      "Cache-Control": req.query.v
+        ? "public, max-age=31536000, immutable"
+        : "no-cache",
+    });
+    res.send(Buffer.from(rows[0].data));
+  } catch (e) {
+    next(e);
+  }
+});
+router.put(
+  "/:id/logo",
+  ...employer,
+  (req, res, next) =>
+    logoUpload(req, res, (error) => {
+      if (error)
+        return fail(
+          res,
+          400,
+          error.code === "LIMIT_FILE_SIZE"
+            ? "Ukuran logo maksimal 512 KB"
+            : "Unggah satu berkas gambar",
+        );
+      next();
+    }),
+  async (req, res, next) => {
+    let db;
+    try {
+      if (!req.file) return fail(res, 400, "Pilih berkas gambar");
+      const type = imageType(req.file.buffer);
+      if (!type)
+        return fail(res, 400, "Logo harus berupa gambar PNG, JPG, atau WebP");
+      db = await pool.connect();
+      await db.query("BEGIN");
+      const owned = await db.query(
+        "UPDATE companies SET logo_updated_at=NOW() WHERE id=$1 AND owner_id=$2 RETURNING logo_updated_at",
+        [req.params.id, req.userId],
+      );
+      if (!owned.rowCount) {
+        await db.query("ROLLBACK");
+        return fail(
+          res,
+          404,
+          "Perusahaan tidak ditemukan atau bukan milik Anda",
+        );
+      }
+      await db.query(
+        "INSERT INTO company_logos(company_id,mime_type,data) VALUES($1,$2,$3) ON CONFLICT (company_id) DO UPDATE SET mime_type=EXCLUDED.mime_type,data=EXCLUDED.data",
+        [req.params.id, type, req.file.buffer],
+      );
+      await db.query("COMMIT");
+      db.release();
+      db = undefined;
+      await scope.companyChanged(req.params.id, req.userId);
+      res.json({
+        status: "success",
+        data: { logo_updated_at: owned.rows[0].logo_updated_at },
+        message: "Logo disimpan",
+      });
+    } catch (e) {
+      if (db) await db.query("ROLLBACK").catch(() => {});
+      next(e);
+    } finally {
+      db?.release();
+    }
+  },
+);
+router.delete("/:id/logo", ...employer, async (req, res, next) => {
+  try {
+    const owned = await pool.query(
+      "UPDATE companies SET logo_updated_at=NULL WHERE id=$1 AND owner_id=$2 RETURNING id",
+      [req.params.id, req.userId],
+    );
+    if (!owned.rowCount)
+      return fail(res, 404, "Perusahaan tidak ditemukan atau bukan milik Anda");
+    await pool.query("DELETE FROM company_logos WHERE company_id=$1", [
+      req.params.id,
+    ]);
+    await scope.companyChanged(req.params.id, req.userId);
+    res.json({ status: "success", message: "Logo dihapus" });
+  } catch (e) {
     next(e);
   }
 });

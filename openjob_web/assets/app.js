@@ -77,12 +77,19 @@ const salary = (j) =>
     : "Gaji tidak ditampilkan";
 const status = (s) =>
   '<span class="status ' + esc(s) + '">' + esc(label(s)) + "</span>";
-const avatar = (name, i = 0) =>
-  '<div class="company-avatar tone-' +
-  (i % 5) +
-  '" aria-hidden="true">' +
-  esc((name || "O").slice(0, 2).toUpperCase()) +
-  "</div>";
+// Logo perusahaan bila ada; kalau tidak, inisial berwarna.
+const avatar = (name, i = 0, companyId, logoAt) =>
+  companyId && logoAt
+    ? '<img class="company-avatar logo" alt="" loading="lazy" src="/api/companies/' +
+      encodeURIComponent(companyId) +
+      "/logo?v=" +
+      new Date(logoAt).getTime() +
+      '">'
+    : '<div class="company-avatar tone-' +
+      (i % 5) +
+      '" aria-hidden="true">' +
+      esc((name || "O").slice(0, 2).toUpperCase()) +
+      "</div>";
 const state = {
   user: null,
   token: sessionStorage.getItem("openjob.access"),
@@ -327,7 +334,7 @@ function card(j, i = 0) {
       : "";
   return (
     '<article class="job-card"><div class="card-top">' +
-    avatar(j.company_name, i) +
+    avatar(j.company_name, i, j.company_id, j.company_logo_updated_at) +
     '<div class="company-meta">' +
     link("#/companies/" + j.company_id, esc(j.company_name), "") +
     "<small>" +
@@ -545,7 +552,7 @@ async function jobDetail(id) {
     " / " +
     esc(j.title) +
     '</div></div><div class="detail-layout"><div><article class="panel"><div class="card-top">' +
-    avatar(j.company_name) +
+    avatar(j.company_name, 0, j.company_id, j.company_logo_updated_at) +
     '<div class="company-meta">' +
     link("#/companies/" + j.company_id, esc(j.company_name), "") +
     "<small>" +
@@ -714,7 +721,7 @@ async function companies(id, params = new URLSearchParams()) {
           .map(
             (c, i) =>
               '<article class="panel">' +
-              avatar(c.name, i) +
+              avatar(c.name, i, c.id, c.logo_updated_at) +
               "<h3>" +
               esc(c.name) +
               "</h3><p>" +
@@ -1239,7 +1246,25 @@ async function employer(section, params = new URLSearchParams()) {
                   esc(x.location) +
                   '</p></div><button class="btn secondary small" data-action="company-form" data-id="' +
                   esc(x.id) +
-                  '">Edit Profil</button></div><p class="detail-description">' +
+                  '">Edit Profil</button></div><div class="logo-row">' +
+                  avatar(x.name, 0, x.id, x.logo_updated_at) +
+                  '<form data-form="company-logo" data-id="' +
+                  esc(x.id) +
+                  '"><label class="btn secondary small" for="logo-' +
+                  esc(x.id) +
+                  '">' +
+                  (x.logo_updated_at ? "Ganti Logo" : "Unggah Logo") +
+                  '</label><input class="visually-hidden" type="file" id="logo-' +
+                  esc(x.id) +
+                  '" name="logo" accept="image/png,image/jpeg,image/webp">' +
+                  formError +
+                  "</form>" +
+                  (x.logo_updated_at
+                    ? '<button class="btn danger small" data-action="delete-logo" data-id="' +
+                      esc(x.id) +
+                      '">Hapus Logo</button>'
+                    : "") +
+                  '<small class="muted">PNG, JPG, atau WebP. Maksimal 512 KB.</small></div><p class="detail-description">' +
                   esc(x.description) +
                   "</p>" +
                   link(
@@ -1982,6 +2007,16 @@ document.addEventListener("submit", async (event) => {
       await api("/documents", { method: "POST", body: new FormData(form) });
       toast("CV berhasil diunggah");
       await route();
+    } else if (type === "company-logo") {
+      const file = $("input[type=file]", form).files[0];
+      if (!file) throw Error("Pilih berkas gambar");
+      if (file.size > 512 * 1024) throw Error("Ukuran logo maksimal 512 KB");
+      await api("/companies/" + form.dataset.id + "/logo", {
+        method: "PUT",
+        body: new FormData(form),
+      });
+      toast("Logo disimpan");
+      await route();
     } else if (type === "company") {
       await send(
         "/companies" + (form.dataset.id ? "/" + form.dataset.id : ""),
@@ -2210,6 +2245,15 @@ document.addEventListener("click", async (event) => {
           toast("Dokumen dihapus");
         },
       );
+    else if (action === "delete-logo")
+      await confirmAction(
+        "Hapus logo?",
+        "Perusahaan akan kembali memakai inisial nama.",
+        async () => {
+          await api("/companies/" + id + "/logo", { method: "DELETE" });
+          toast("Logo dihapus");
+        },
+      );
     else if (action === "application-detail") await applicationDetail(id);
     else if (action === "withdraw")
       await confirmAction(
@@ -2227,6 +2271,9 @@ document.addEventListener("click", async (event) => {
   }
 });
 document.addEventListener("change", (e) => {
+  // Logo langsung diunggah begitu berkas dipilih.
+  if (e.target.matches?.("[data-form=company-logo] input[type=file]"))
+    e.target.form.requestSubmit();
   if (e.target.id === "job-sort") {
     const p = new URLSearchParams(location.hash.split("?")[1]);
     p.delete("page");

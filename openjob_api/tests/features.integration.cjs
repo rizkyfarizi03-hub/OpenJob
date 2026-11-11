@@ -164,4 +164,94 @@ test("OpenJob fitur: filter gaji, urutan, dan riwayat lamaran", async (t) => {
       assert.equal((await call("/jobs/" + high)).body.data.applicant_count, 0);
     },
   );
+
+  await t.test(
+    "logo perusahaan: hanya pemilik, hanya gambar, tersaji publik",
+    async () => {
+      const png = Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+        "base64",
+      );
+      const send = (bytes, token, type = "image/png", name = "logo.png") => {
+        const form = new FormData();
+        form.append("logo", new Blob([bytes], { type }), name);
+        return call("/companies/" + company + "/logo", "PUT", form, token);
+      };
+      const logo = () => fetch(base + "/api/companies/" + company + "/logo");
+      assert.equal((await logo()).status, 404);
+      assert.equal(
+        (await call("/companies/" + company)).body.data.logo_updated_at,
+        null,
+      );
+      assert.equal((await send(png)).code, 401);
+      assert.equal((await send(png, candidate.token)).code, 403);
+      const stranger = await user("Stranger", "employer");
+      assert.equal((await send(png, stranger.token)).code, 404);
+      // Isi berkas yang menentukan, bukan nama atau tipe yang dikirim.
+      assert.equal(
+        (await send(Buffer.from("<svg onload=alert(1)>"), owner.token)).code,
+        400,
+      );
+      assert.equal(
+        (await send(Buffer.from("%PDF-1.4 bukan gambar"), owner.token)).code,
+        400,
+      );
+      assert.equal(
+        (
+          await send(
+            Buffer.concat([png, Buffer.alloc(600 * 1024)]),
+            owner.token,
+          )
+        ).code,
+        400,
+      );
+      assert.equal((await logo()).status, 404);
+      const saved = await send(
+        png,
+        owner.token,
+        "application/octet-stream",
+        "apa-saja.bin",
+      );
+      assert.equal(saved.code, 200);
+      const served = await logo();
+      assert.equal(served.status, 200);
+      assert.equal(served.headers.get("content-type"), "image/png");
+      assert.equal(served.headers.get("x-content-type-options"), "nosniff");
+      assert.deepEqual(Buffer.from(await served.arrayBuffer()), png);
+      // Profil perusahaan yang ter-cache dan daftar lowongan ikut diperbarui.
+      assert.ok(
+        (await call("/companies/" + company)).body.data.logo_updated_at,
+      );
+      assert.ok(
+        (await call("/jobs")).body.data.jobs[0].company_logo_updated_at,
+      );
+      assert.equal(
+        (
+          await call(
+            "/companies/" + company + "/logo",
+            "DELETE",
+            null,
+            stranger.token,
+          )
+        ).code,
+        404,
+      );
+      assert.equal(
+        (
+          await call(
+            "/companies/" + company + "/logo",
+            "DELETE",
+            null,
+            owner.token,
+          )
+        ).code,
+        200,
+      );
+      assert.equal((await logo()).status, 404);
+      assert.equal(
+        (await call("/companies/" + company)).body.data.logo_updated_at,
+        null,
+      );
+    },
+  );
 });

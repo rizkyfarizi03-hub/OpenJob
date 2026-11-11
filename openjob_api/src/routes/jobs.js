@@ -12,7 +12,7 @@ const fields = `j.id,j.owner_id,j.company_id,j.category_id,j.title,j.description
  j.experience_level,j.location_type,j.location_city,j.is_salary_visible,j.status,j.created_at,
  CASE WHEN j.is_salary_visible THEN j.salary_min ELSE NULL END AS salary_min,
  CASE WHEN j.is_salary_visible THEN j.salary_max ELSE NULL END AS salary_max,
- c.name AS company_name,c.description AS company_description,cat.name AS category_name`;
+ c.name AS company_name,c.description AS company_description,c.logo_updated_at AS company_logo_updated_at,cat.name AS category_name`;
 const from =
   "FROM jobs j JOIN companies c ON c.id=j.company_id JOIN categories cat ON cat.id=j.category_id";
 const schema = Joi.object({

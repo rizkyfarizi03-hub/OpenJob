@@ -1866,3 +1866,43 @@ dialog::backdrop {
   font-size: 12px;
   color: var(--muted);
 }
+
+/* Logo perusahaan. */
+img.company-avatar.logo {
+  display: block;
+  padding: 3px;
+  background: white;
+  border: 1px solid var(--line);
+  object-fit: contain;
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.logo-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.logo-row form {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.logo-row label.btn {
+  cursor: pointer;
+}
+/* Input berkasnya tersembunyi, jadi fokus keyboard ditunjukkan pada tombolnya. */
+.logo-row form:focus-within label.btn {
+  outline: 3px solid #7fac50;
+  outline-offset: 4px;
+}
+.logo-row .form-error {
+  margin: 0;
+}
