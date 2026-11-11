@@ -296,7 +296,23 @@ function renderHeader() {
         link("#/register?role=employer", "Pasang Lowongan " + icon("arrow"))) +
     "</div></nav>";
 }
+// Umur lowongan dalam bahasa sehari-hari, dihitung dari waktu publikasi.
+function ago(v) {
+  const minutes = Math.max(0, Math.floor((Date.now() - new Date(v)) / 60000));
+  if (minutes < 5) return "Baru saja";
+  if (minutes < 60) return minutes + " menit lalu";
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return hours + " jam lalu";
+  const days = Math.floor(hours / 24);
+  if (days < 7) return days + " hari lalu";
+  if (days < 30) return Math.floor(days / 7) + " minggu lalu";
+  if (days < 365) return Math.floor(days / 30) + " bulan lalu";
+  return "Lebih dari setahun lalu";
+}
+const isNew = (v) => Date.now() - new Date(v) < 3 * 86400000;
 function card(j, i = 0) {
+  // Pada bookmark, created_at adalah waktu menyimpan; waktu publikasi ada di job_created_at.
+  const posted = j.job_created_at || j.created_at;
   const b =
     !state.user || state.user.role === "user"
       ? '<button class="icon-btn ' +
@@ -316,11 +332,22 @@ function card(j, i = 0) {
     link("#/companies/" + j.company_id, esc(j.company_name), "") +
     "<small>" +
     esc(j.location_city || label(j.location_type)) +
+    (posted
+      ? ' · <time datetime="' +
+        esc(new Date(posted).toISOString()) +
+        '" title="' +
+        esc(date(posted)) +
+        '">' +
+        ago(posted) +
+        "</time>"
+      : "") +
     "</small></div>" +
     b +
     "</div><h3>" +
     link("#/jobs/" + j.id, esc(j.title), "") +
-    '</h3><div class="tags"><span class="tag">' +
+    '</h3><div class="tags">' +
+    (posted && isNew(posted) ? '<span class="tag new">Baru</span>' : "") +
+    '<span class="tag">' +
     esc(label(j.job_type)) +
     '</span><span class="tag">' +
     esc(label(j.experience_level)) +
@@ -513,6 +540,8 @@ async function jobDetail(id) {
     "</strong></div><div><span>Lokasi</span><strong>" +
     esc(j.location_city || label(j.location_type)) +
     "</strong></div><div><span>Dipublikasikan</span><strong>" +
+    ago(j.created_at) +
+    " · " +
     date(j.created_at) +
     '</strong></div></div><div class="divider"></div><h2>Tentang pekerjaan ini</h2><div class="detail-description">' +
     esc(j.description) +

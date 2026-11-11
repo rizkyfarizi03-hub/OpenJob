@@ -605,6 +605,11 @@ header {
   background: #eaf4e5;
   color: #47753c;
 }
+.tag.new {
+  background: var(--lime);
+  color: var(--dark);
+  font-weight: 650;
+}
 .card-bottom {
   margin-top: auto;
   padding-top: 23px;

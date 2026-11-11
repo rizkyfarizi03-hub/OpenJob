@@ -49,9 +49,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     throw Error("timeout: " + what);
   };
   const go = async (hash) => {
+    // Tandai isi lama agar kita menunggu sampai halaman baru benar-benar dirender.
+    for (const el of $("#main").children) el.dataset.stale = "1";
     w.location.hash = hash;
-    await sleep(150);
-    await until(() => !$(".loading"), "route " + hash);
+    await until(
+      () => !$("#main [data-stale]") && !$(".loading"),
+      "route " + hash,
+    );
   };
   const fill = (sel, v) => {
     const el = $(sel);
@@ -83,6 +87,22 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const ok = (m) => console.log("ok", ++n, m);
 
   await until(() => $(".hero") || $("#main h1"), "home");
+  // 0. job age on cards and detail
+  await sb.pool.query(
+    "UPDATE jobs SET created_at=NOW()-INTERVAL '10 days' WHERE id='demo-job-1'",
+  );
+  await go("#/jobs");
+  const cardFor = (title) =>
+    $$(".job-card").find((c) => c.querySelector("h3").textContent === title);
+  assert.ok(cardFor("Frontend Developer").textContent.includes("1 jam lalu"));
+  assert.ok(cardFor("Frontend Developer").querySelector(".tag.new"));
+  // Lowongan tertua berada di halaman kedua.
+  await go("#/jobs?page=2");
+  assert.ok(cardFor("Product Designer").textContent.includes("1 minggu lalu"));
+  assert.equal(cardFor("Product Designer").querySelector(".tag.new"), null);
+  await go("#/jobs/demo-job-1");
+  assert.ok(text(".detail-summary").includes("1 minggu lalu ·"));
+  ok("job age and new badge");
   // 1. password toggle + caps lock
   await go("#/login");
   const pw = $("#password"),
