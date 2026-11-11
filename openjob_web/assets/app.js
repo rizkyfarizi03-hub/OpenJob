@@ -1201,6 +1201,8 @@ function applicantPagination(p) {
   );
 }
 async function employer(section, params = new URLSearchParams()) {
+  const editor = section.match(/^employer\/jobs\/(?:new|([^/]+)\/edit)$/);
+  if (editor) return jobPage(editor[1] && decodeURIComponent(editor[1]));
   const companyOnly = section === "employer/company",
     needsApplicants =
       section === "employer" || section === "employer/applicants";
@@ -1573,88 +1575,160 @@ async function openJobForm(id) {
       return;
     }
   }
-  jobForm(id);
+  const hash = id
+    ? "#/employer/jobs/" + encodeURIComponent(id) + "/edit"
+    : "#/employer/jobs/new";
+  if (location.hash === hash) await route();
+  else location.hash = hash;
 }
 const money = (v) => (v == null || v === "" ? "" : currency(v));
-function jobForm(id) {
-  const j = state.jobs.find((x) => x.id === id) || {};
-  showDialog(
-    id ? "Edit lowongan" : "Pasang lowongan",
+// Kartu pratinjau memakai tampilan yang sama dengan hasil pencarian.
+function jobPreview(j) {
+  const company = state.companies.find((c) => c.id === j.company_id) || {};
+  return card({
+    ...j,
+    id: "pratinjau",
+    title: j.title || "Judul posisi",
+    company_name: company.name || "Perusahaan",
+    company_logo_updated_at: company.logo_updated_at,
+    created_at: new Date().toISOString(),
+  });
+}
+function readJobForm(form) {
+  const data = Object.fromEntries(new FormData(form));
+  for (const k of ["salary_min", "salary_max"]) {
+    const digits = data[k].replace(/\D/g, "");
+    data[k] = digits === "" ? null : Number(digits);
+  }
+  data.is_salary_visible = $("[name=is_salary_visible]", form).checked;
+  return data;
+}
+// Halaman pasang/edit lowongan: form di kiri, pratinjau kartu di kanan.
+async function jobPage(id) {
+  const [mine, owned] = await Promise.all([
+    api("/jobs/mine"),
+    api("/companies/mine"),
+  ]);
+  state.jobs = mine.jobs;
+  state.companies = owned.companies;
+  const back = link("#/employer/jobs", "Kembali ke lowongan", "btn secondary");
+  const j = id ? state.jobs.find((x) => x.id === id) : {};
+  if (!j)
+    return workspace(
+      empty(
+        "Lowongan tidak ditemukan",
+        "Lowongan ini tidak ada atau bukan milik Anda.",
+        back,
+      ),
+      "employer/jobs",
+      true,
+    );
+  if (!id && !state.companies.length)
+    return workspace(
+      empty(
+        "Buat profil perusahaan dulu",
+        "Lowongan dipasang atas nama perusahaan Anda.",
+        '<button class="btn" data-action="job-form">Buat Profil Perusahaan</button>',
+      ),
+      "employer/jobs",
+      true,
+    );
+  const initial = {
+    job_type: "full-time",
+    experience_level: "junior",
+    location_type: "on-site",
+    company_id: state.companies[0]?.id,
+    ...j,
+  };
+  return workspace(
+    heading(
+      id ? "Edit lowongan" : "Pasang lowongan",
+      id
+        ? "Perubahan langsung terlihat oleh pelamar setelah disimpan."
+        : "Lengkapi detail posisi. Pratinjau di samping mengikuti isian Anda.",
+    ) +
+      '<div class="job-editor"><section class="panel">' +
+      jobForm(id, initial) +
+      '</section><aside class="job-preview" aria-label="Pratinjau lowongan"><p class="sidebar-label">PRATINJAU</p><div id="job-preview" inert>' +
+      jobPreview(initial) +
+      '</div><p class="tiny muted">Begini lowongan tampil di hasil pencarian.</p></aside></div>',
+    "employer/jobs",
+    true,
+  );
+}
+function jobForm(id, j) {
+  return (
     '<form data-form="job" data-id="' +
-      esc(id || "") +
-      '"><div class="form-grid"><div class="span-2">' +
-      field(
-        "title",
-        "Judul posisi",
-        "text",
-        j.title,
-        'required maxlength="255"',
-      ) +
-      "</div>" +
-      select(
-        "company_id",
-        "Perusahaan",
-        state.companies.map((c) => [c.id, c.name]),
-        j.company_id || state.companies[0]?.id,
-      ) +
-      select(
-        "category_id",
-        "Kategori",
-        state.categories.map((c) => [c.id, c.name]),
-        j.category_id,
-      ) +
-      select(
-        "job_type",
-        "Tipe pekerjaan",
-        ["full-time", "part-time", "contract", "internship", "freelance"],
-        j.job_type || "full-time",
-      ) +
-      select(
-        "experience_level",
-        "Pengalaman",
-        ["entry", "junior", "mid", "senior", "lead"],
-        j.experience_level || "junior",
-      ) +
-      select(
-        "location_type",
-        "Sistem kerja",
-        ["remote", "hybrid", "on-site"],
-        j.location_type || "on-site",
-      ) +
-      field(
-        "location_city",
-        "Kota",
-        "text",
-        j.location_city,
-        'maxlength="255"',
-      ) +
-      field(
-        "salary_min",
-        "Gaji minimum / bulan (Rp)",
-        "text",
-        money(j.salary_min),
-        'inputmode="numeric" autocomplete="off" data-money placeholder="Contoh: 5.000.000"',
-      ) +
-      field(
-        "salary_max",
-        "Gaji maksimum / bulan (Rp)",
-        "text",
-        money(j.salary_max),
-        'inputmode="numeric" autocomplete="off" data-money placeholder="Contoh: 8.000.000"',
-      ) +
-      '</div><p class="salary-hint" role="status"></p><label class="check"><input type="checkbox" name="is_salary_visible" ' +
-      (j.is_salary_visible ? "checked" : "") +
-      "> Tampilkan gaji di lowongan</label>" +
-      area(
-        "description",
-        "Deskripsi, tanggung jawab & kualifikasi",
-        j.description,
-        'required maxlength="20000"',
-      ) +
-      formError +
-      '<button class="btn full">' +
-      (id ? "Simpan Perubahan" : "Publikasikan Lowongan") +
-      "</button></form>",
+    esc(id || "") +
+    '"><div class="form-grid"><div class="span-2">' +
+    field(
+      "title",
+      "Judul posisi",
+      "text",
+      j.title,
+      'required maxlength="255"',
+    ) +
+    "</div>" +
+    select(
+      "company_id",
+      "Perusahaan",
+      state.companies.map((c) => [c.id, c.name]),
+      j.company_id || state.companies[0]?.id,
+    ) +
+    select(
+      "category_id",
+      "Kategori",
+      state.categories.map((c) => [c.id, c.name]),
+      j.category_id,
+    ) +
+    select(
+      "job_type",
+      "Tipe pekerjaan",
+      ["full-time", "part-time", "contract", "internship", "freelance"],
+      j.job_type || "full-time",
+    ) +
+    select(
+      "experience_level",
+      "Pengalaman",
+      ["entry", "junior", "mid", "senior", "lead"],
+      j.experience_level || "junior",
+    ) +
+    select(
+      "location_type",
+      "Sistem kerja",
+      ["remote", "hybrid", "on-site"],
+      j.location_type || "on-site",
+    ) +
+    field("location_city", "Kota", "text", j.location_city, 'maxlength="255"') +
+    field(
+      "salary_min",
+      "Gaji minimum / bulan (Rp)",
+      "text",
+      money(j.salary_min),
+      'inputmode="numeric" autocomplete="off" data-money placeholder="Contoh: 5.000.000"',
+    ) +
+    field(
+      "salary_max",
+      "Gaji maksimum / bulan (Rp)",
+      "text",
+      money(j.salary_max),
+      'inputmode="numeric" autocomplete="off" data-money placeholder="Contoh: 8.000.000"',
+    ) +
+    '</div><p class="salary-hint" role="status"></p><label class="check"><input type="checkbox" name="is_salary_visible" ' +
+    (j.is_salary_visible ? "checked" : "") +
+    "> Tampilkan gaji di lowongan</label>" +
+    area(
+      "description",
+      "Deskripsi, tanggung jawab & kualifikasi",
+      j.description,
+      'required maxlength="20000"',
+    ) +
+    formError +
+    '<div class="form-actions">' +
+    link("#/employer/jobs", "Batal", "btn secondary") +
+    '<button class="btn">' +
+    (id ? "Simpan Perubahan" : "Publikasikan Lowongan") +
+    "</button></div></form>"
   );
 }
 async function apply(id) {
@@ -2056,9 +2130,9 @@ document.addEventListener("submit", async (event) => {
         form.dataset.id ? "PUT" : "POST",
         data,
       );
-      dialog.close();
       toast("Lowongan berhasil disimpan");
-      await route();
+      if (location.hash === "#/employer/jobs") await route();
+      else location.hash = "#/employer/jobs";
     } else if (type === "apply") {
       await send("/applications", "POST", { job_id: form.dataset.id, ...data });
       dialog.close();
@@ -2305,6 +2379,13 @@ dialog.addEventListener("click", (e) => {
       dialog.close();
   }
 });
+// Pratinjau lowongan mengikuti setiap perubahan isian.
+for (const type of ["input", "change"])
+  document.addEventListener(type, (e) => {
+    const form = e.target.closest?.("[data-form=job]"),
+      preview = $("#job-preview");
+    if (form && preview) preview.innerHTML = jobPreview(readJobForm(form));
+  });
 // Kolom gaji: pemisah ribuan saat mengetik, plus peringatan untuk angka yang janggal.
 document.addEventListener("input", (e) => {
   const el = e.target;

@@ -186,12 +186,14 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   fill("#dialog #location", "Depok");
   $("[data-form=company]").requestSubmit();
   await until(
-    () =>
-      text("#dialog-title") === "Pasang lowongan" &&
-      $("#dialog").hasAttribute("open"),
-    "job form after company",
+    () => w.location.hash === "#/employer/jobs/new" && $("[data-form=job]"),
+    "job page after company",
   );
+  assert.equal($("#dialog").hasAttribute("open"), false);
+  assert.equal(text("#main h1"), "Pasang lowongan");
   assert.equal($("#company_id").selectedOptions[0].textContent, "PT Uji");
+  assert.equal(text("#job-preview h3"), "Judul posisi");
+  assert.ok($("#job-preview").hasAttribute("inert"));
   ok("company form continues to job form");
 
   // 5. salary formatting and warnings
@@ -219,11 +221,22 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   fill("#title", "Konten Kreator");
   $("#category_id").value = "category-design";
   fill("#description", "Deskripsi uji");
+  // Pratinjau mengikuti isian; gaji baru tampil setelah dicentang.
+  assert.equal(text("#job-preview h3"), "Konten Kreator");
+  assert.ok(text("#job-preview").includes("PT Uji"));
+  assert.equal(text("#job-preview .salary"), "Gaji tidak ditampilkan");
+  const visible = $("[name=is_salary_visible]");
+  visible.checked = true;
+  visible.dispatchEvent(new w.Event("change", { bubbles: true }));
+  assert.equal(text("#job-preview .salary"), "Rp5.000.000 – 8.000.000");
+  visible.checked = false;
+  visible.dispatchEvent(new w.Event("change", { bubbles: true }));
   $("[data-form=job]").requestSubmit();
   await until(
-    () => !$("#dialog").hasAttribute("open") && $("table") && !$(".loading"),
+    () => w.location.hash === "#/employer/jobs" && $("table") && !$(".loading"),
     "job saved",
   );
+  await go("#/employer");
   const saved = await sb.pool.query(
     "SELECT salary_min,salary_max,status FROM jobs WHERE title='Konten Kreator'",
   );
@@ -238,9 +251,16 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   // 6. editing shows formatted salary
   $("table [data-action=job-form]").click();
-  await until(() => text("#dialog-title") === "Edit lowongan", "edit dialog");
+  await until(
+    () =>
+      /^#\/employer\/jobs\/.+\/edit$/.test(w.location.hash) && $("#salary_min"),
+    "edit page",
+  );
+  assert.equal(text("#main h1"), "Edit lowongan");
   assert.equal($("#salary_min").value, "5.000.000");
-  $("#dialog").close();
+  assert.equal(text("#job-preview h3"), "Konten Kreator");
+  await go("#/employer/jobs/tidak-ada/edit");
+  assert.ok(text("#main").includes("Lowongan tidak ditemukan"));
   ok("edit form pre-fills formatted salary");
 
   // 7. new applicant: role-specific notice, no zero stats
@@ -313,10 +333,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   assert.ok($(".stats"));
   $(".section-head [data-action=job-form]").click();
   await until(
-    () => text("#dialog-title") === "Pasang lowongan",
-    "job form for demo recruiter",
+    () => w.location.hash === "#/employer/jobs/new" && $("[data-form=job]"),
+    "job page for demo recruiter",
   );
-  $("#dialog").close();
   await go("#/employer/jobs");
   assert.equal(text(".section-head h2"), "Daftar lowongan");
   await go("#/account/profile");

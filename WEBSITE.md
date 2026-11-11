@@ -344,3 +344,14 @@ Pengujian: `npm run test:cache` (PGlite dan cache memori) mencakup miss, hit, in
 - Font Inter disertakan di `openjob_web/assets/fonts` (lisensi OFL) sehingga tampilan sama di semua perangkat; teks sekunder dibuat lebih gelap dan kartu statistik lebih ringkas.
 
 Pengujian: `npm run test:ui` dari folder utama menjalankan `openjob_web/tests/ui.test.cjs` terhadap server demo dalam memori. Pemeriksaan visual di browser baru dilakukan pada halaman daftar dan ringkasan perekrut.
+
+## Fitur tambahan — 11 November 2026
+
+- **Umur lowongan.** Kartu dan detail menampilkan waktu sejak publikasi; lowongan di bawah tiga hari diberi tanda "Baru".
+- **Pencarian.** `GET /jobs` menerima `posted=1|7|30` (hari), `min_salary`, dan `sort=newest|salary`. Lowongan bergaji tersembunyi tidak cocok dengan `min_salary` dan selalu berada di akhir urutan gaji, agar nominalnya tidak bisa ditebak.
+- **Jumlah pelamar.** `GET /jobs/:id` menyertakan `applicant_count` (tanpa lamaran yang ditarik). Tampilan membulatkan jumlah di bawah lima; API tetap mengirim angka persisnya.
+- **Riwayat tahap lamaran.** `GET /applications/:id` menyertakan `history`, disusun dari waktu lamaran dikirim, baris `application_status_outbox`, dan waktu penarikan.
+- **Logo perusahaan.** Migrasi `1793500000000_company_logos.js` menambah `companies.logo_updated_at` dan tabel `company_logos` (gambar disimpan sebagai `bytea`). `PUT` dan `DELETE /companies/:id/logo` hanya untuk pemilik; `GET /companies/:id/logo` publik. Hanya PNG, JPG, dan WebP hingga 512 KB, dikenali dari isi berkas. Gambar tidak diproses ulang, jadi ukuran piksel tidak dibatasi.
+- **Halaman lowongan.** Form pasang/edit lowongan pindah dari dialog ke `#/employer/jobs/new` dan `#/employer/jobs/:id/edit`, dengan pratinjau kartu yang mengikuti isian.
+
+Database yang sudah ada perlu `npm run migrate` untuk fitur logo. Pengujian: `tests/features.integration.cjs` dan `npm run test:ui`, keduanya memakai PGlite; penyimpanan `bytea` belum diuji pada PostgreSQL sungguhan.
