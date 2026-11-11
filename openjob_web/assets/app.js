@@ -639,7 +639,7 @@ async function companies(id, params = new URLSearchParams()) {
       "PERUSAHAAN",
     ) +
     search +
-    '<div class="results-head" style="margin-top:24px"><span><strong>' +
+    '<div class="results-head spaced"><span><strong>' +
     p.total +
     "</strong> perusahaan ditemukan</span>" +
     (params.get("name") || params.get("location")
@@ -1102,9 +1102,12 @@ async function account(section, params = new URLSearchParams()) {
         "Diterima",
         d.applications.filter((a) => a.status === "accepted").length,
       ) +
-      '</div><div class="section-head"><h2>Lamaran saya</h2>' +
-      link("#/jobs", "Cari Lowongan " + icon("arrow"), "text-link") +
       "</div>" +
+      (d.applications.length
+        ? '<div class="section-head"><h2>Riwayat lamaran</h2>' +
+          link("#/jobs", "Cari Lowongan " + icon("arrow"), "text-link") +
+          "</div>"
+        : "") +
       applicationsTable(d.applications, false),
     section,
   );
