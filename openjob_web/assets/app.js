@@ -30,6 +30,9 @@ const icons = {
   plus: '<path d="M12 4v16M4 12h16"/>',
   filter: '<path d="M3 6h18M6 12h12M9 18h6"/>',
   tag: '<path d="M12 2H2v10l10 10 10-10L12 2Zm-5 5a2 2 0 1 1 0-4 2 2 0 0 1 0 4Z"/>',
+  eye: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
+  eyeOff:
+    '<path d="m3 3 18 18M10.6 5.1A10.6 10.6 0 0 1 12 5c6 0 10 7 10 7a17 17 0 0 1-3.2 3.9M6.5 6.6C3.7 8.5 2 12 2 12s4 7 10 7a9.7 9.7 0 0 0 4.3-1M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
 };
 const icon = (n) =>
   '<svg viewBox="0 0 24 24" aria-hidden="true">' +
@@ -184,10 +187,10 @@ const empty = (t, m, a = "") =>
   "</p>" +
   a +
   "</div>";
-const heading = (t, d, k = "RUANG KARIER ANDA") =>
-  '<div class="page-head"><div class="eyebrow">' +
-  esc(k) +
-  "</div><h1>" +
+const heading = (t, d, k = "") =>
+  '<div class="page-head">' +
+  (k ? '<div class="eyebrow">' + esc(k) + "</div>" : "") +
+  "<h1>" +
   esc(t) +
   "</h1><p>" +
   esc(d) +
@@ -197,7 +200,9 @@ const field = (n, t, type = "text", v = "", extra = "") =>
   n +
   '">' +
   t +
-  '</label><input id="' +
+  "</label>" +
+  (type === "password" ? '<div class="password-wrap">' : "") +
+  '<input id="' +
   n +
   '" name="' +
   n +
@@ -207,7 +212,13 @@ const field = (n, t, type = "text", v = "", extra = "") =>
   esc(v) +
   '" ' +
   extra +
-  "></div>";
+  ">" +
+  (type === "password"
+    ? '<button type="button" class="password-toggle" data-action="toggle-password" aria-label="Tampilkan password" aria-pressed="false">' +
+      icon("eye") +
+      '</button></div><small class="caps-warning" role="status" hidden>Caps Lock menyala.</small>'
+    : "") +
+  "</div>";
 function select(n, t, items, v = "", all = "Pilih…") {
   return (
     '<div class="field"><label for="' +
@@ -852,15 +863,27 @@ function verificationPage() {
     "</section></div>"
   );
 }
+const needsVerification = () =>
+  Boolean(state.features?.emailVerification) &&
+  state.user?.email_verified_at === null;
+// Demo tanpa Mailpit tidak mengirim email, jadi akun baru tidak bisa diverifikasi.
+const mailUnavailable = () => state.demo && !state.features?.demoMail;
+const demoMailNote =
+  "Mode demo ini tidak mengirim email, jadi akun baru tidak bisa diverifikasi. Untuk mencoba alur lengkap, masuk dengan akun contoh di halaman Masuk.";
 function verificationNotice() {
-  return state.features?.emailVerification &&
-    state.user?.email_verified_at === null
-    ? '<div class="notice" role="status">Email Anda belum diverifikasi. Anda tetap bisa menyiapkan profil dan CV. Verifikasi diperlukan sebelum melamar atau menerbitkan lowongan. ' +
-        link("#/verify-email", "Verifikasi email", "text-link") +
-        "</div>"
-    : "";
+  if (!needsVerification()) return "";
+  return (
+    '<div class="notice warn" role="status"><strong>Email belum diverifikasi.</strong> ' +
+    (state.user.role === "user"
+      ? "Anda sudah bisa mengunggah CV. Verifikasi diperlukan sebelum mengirim lamaran. "
+      : "Anda sudah bisa membuat profil perusahaan. Verifikasi diperlukan sebelum menerbitkan lowongan. ") +
+    (mailUnavailable()
+      ? demoMailNote
+      : link("#/verify-email", "Verifikasi email", "text-link")) +
+    "</div>"
+  );
 }
-function workspace(content, section, employer = false) {
+function workspace(content, section, employer = false, notice = true) {
   const isAdmin = state.user?.role === "admin";
   const adminLinks = isAdmin
     ? [["admin/categories", "tag", "Kategori Lowongan"]]
@@ -891,7 +914,7 @@ function workspace(content, section, employer = false) {
       )
       .join("") +
     '</aside><div class="workspace-main">' +
-    verificationNotice() +
+    (notice ? verificationNotice() : "") +
     content +
     "</div></div>"
   );
@@ -1065,7 +1088,9 @@ async function account(section, params = new URLSearchParams()) {
   state.applications = d.applications;
   return workspace(
     heading("Lamaran Saya", "Pantau status dan pembaruan lamaran Anda.") +
-      '<div class="stats">' +
+      (d.applications.length
+        ? '<div class="stats">'
+        : '<div class="stats" hidden>') +
       stat("Total lamaran", d.applications.length) +
       stat(
         "Dalam proses",
@@ -1160,8 +1185,11 @@ async function employer(section, params = new URLSearchParams()) {
               )
               .join("")
           : empty(
-              "Perkenalkan perusahaan Anda",
+              "Belum ada perusahaan",
               "Buat profil perusahaan sebelum memasang lowongan.",
+              '<button class="btn" data-action="company-form">' +
+                icon("plus") +
+                "Tambah Perusahaan</button>",
             )),
       section,
       true,
@@ -1239,10 +1267,8 @@ async function employer(section, params = new URLSearchParams()) {
         )
         .join("") +
       "</tbody></table></div>"
-    : empty(
-        "Siap membuka peluang baru?",
-        "Buat profil perusahaan, lalu publikasikan lowongan pertama Anda.",
-      );
+    : "";
+  const guide = onboarding(c, j);
   return workspace(
     heading(
       section === "employer" ? "Ringkasan Rekrutmen" : "Lowongan saya",
@@ -1250,7 +1276,8 @@ async function employer(section, params = new URLSearchParams()) {
         ? "Semua aktivitas rekrutmen Anda, dalam satu tempat."
         : "Kelola posisi yang sedang dibuka untuk tim Anda.",
     ) +
-      (section === "employer"
+      guide +
+      (section === "employer" && (j.jobs.length || a.summary.total)
         ? '<div class="stats">' +
           stat(
             "Lowongan aktif",
@@ -1260,19 +1287,82 @@ async function employer(section, params = new URLSearchParams()) {
           stat("Menunggu ditinjau", a.summary.pending) +
           "</div>"
         : "") +
-      (!c.companies.length
-        ? '<div class="notice">Mulai dengan membuat profil perusahaan. ' +
-          link("#/employer/company", "Buat profil perusahaan →", "text-link") +
-          "</div>"
-        : "") +
-      '<div class="section-head"><h2>Lowongan Anda</h2><button class="btn" data-action="job-form" ' +
-      (!c.companies.length ? "disabled" : "") +
-      ">" +
-      icon("plus") +
-      "Pasang Lowongan</button></div>" +
-      table,
+      (j.jobs.length
+        ? '<div class="section-head"><h2>' +
+          (section === "employer" ? "Lowongan Anda" : "Daftar lowongan") +
+          '</h2><button class="btn" data-action="job-form">' +
+          icon("plus") +
+          "Pasang Lowongan</button></div>" +
+          table
+        : guide
+          ? ""
+          : empty(
+              "Belum ada lowongan",
+              "Pasang lowongan pertama Anda.",
+              '<button class="btn" data-action="job-form">' +
+                icon("plus") +
+                "Pasang Lowongan</button>",
+            )),
     section,
     true,
+    !guide,
+  );
+}
+// Tiga langkah awal perekrut; hilang setelah lowongan pertama terpasang.
+function onboarding(c, j) {
+  const unverified = needsVerification();
+  const steps = [
+    [
+      !unverified,
+      "Verifikasi email",
+      !unverified
+        ? "Email Anda sudah terverifikasi."
+        : mailUnavailable()
+          ? demoMailNote
+          : "Buka tautan yang dikirim ke " + esc(state.user.email) + ".",
+      mailUnavailable()
+        ? ""
+        : link("#/verify-email", "Verifikasi", "btn secondary small"),
+    ],
+    [
+      c.companies.length > 0,
+      "Buat profil perusahaan",
+      "Lowongan dipasang atas nama perusahaan Anda.",
+      '<button class="btn secondary small" data-action="company-form">Buat Profil</button>',
+    ],
+    [
+      j.jobs.length > 0,
+      "Pasang lowongan pertama",
+      "Lowongan tampil di pencarian setelah diterbitkan.",
+      '<button class="btn secondary small" data-action="job-form">Pasang Lowongan</button>',
+    ],
+  ];
+  if (steps.every(([done]) => done)) return "";
+  // Langkah yang disorot adalah yang pertama bisa dikerjakan sekarang.
+  const next = steps.findIndex(([done, , , action]) => !done && action);
+  return (
+    '<section class="panel onboarding" aria-label="Langkah memulai"><h2>Mulai merekrut dalam tiga langkah</h2><ol class="steps">' +
+    steps
+      .map(
+        ([done, title, text, action], i) =>
+          '<li class="step' +
+          (done ? " done" : i === next ? " current" : "") +
+          '"><span class="step-mark" aria-hidden="true">' +
+          (done ? icon("check") : i + 1) +
+          "</span><div><strong>" +
+          title +
+          "</strong><p>" +
+          text +
+          "</p></div>" +
+          (done
+            ? '<span class="step-state">Selesai</span>'
+            : i === next
+              ? action.replace("btn secondary small", "btn small")
+              : action) +
+          "</li>",
+      )
+      .join("") +
+    "</ol></section>"
   );
 }
 async function adminCategories() {
@@ -1335,12 +1425,17 @@ function categoryForm(id, name = "") {
       "</button></form>",
   );
 }
-function companyForm(id) {
+function companyForm(id, thenJob = false) {
   const c = state.companies.find((x) => x.id === id) || {};
   showDialog(
-    id ? "Edit perusahaan" : "Perkenalkan perusahaan Anda",
-    '<form data-form="company" data-id="' +
+    id ? "Edit perusahaan" : "Tambah perusahaan",
+    (thenJob
+      ? '<p class="muted">Lowongan dipasang atas nama perusahaan. Buat profilnya dulu, setelah itu form lowongan langsung terbuka.</p>'
+      : "") +
+      '<form data-form="company" data-id="' +
       esc(id || "") +
+      '" data-then="' +
+      (thenJob ? "job" : "") +
       '">' +
       field(
         "name",
@@ -1363,13 +1458,37 @@ function companyForm(id) {
         'maxlength="10000"',
       ) +
       formError +
-      '<button class="btn full">Simpan Perusahaan</button></form>',
+      '<button class="btn full">' +
+      (thenJob ? "Simpan dan Lanjut ke Lowongan" : "Simpan Perusahaan") +
+      "</button></form>",
   );
 }
+// Lowongan baru butuh email terverifikasi dan minimal satu perusahaan.
+async function openJobForm(id) {
+  if (!id) {
+    if (state.features?.emailVerification) state.user = await api("/profile");
+    if (needsVerification()) {
+      showDialog(
+        "Verifikasi email terlebih dahulu",
+        "<p>Lowongan baru bisa diterbitkan setelah email akun Anda diverifikasi.</p>" +
+          (mailUnavailable()
+            ? '<div class="notice warn">' + demoMailNote + "</div>"
+            : link("#/verify-email", "Verifikasi email")),
+      );
+      return;
+    }
+    if (!state.companies.length) {
+      companyForm(undefined, true);
+      return;
+    }
+  }
+  jobForm(id);
+}
+const money = (v) => (v == null || v === "" ? "" : currency(v));
 function jobForm(id) {
   const j = state.jobs.find((x) => x.id === id) || {};
   showDialog(
-    id ? "Edit lowongan" : "Buka peluang baru",
+    id ? "Edit lowongan" : "Pasang lowongan",
     '<form data-form="job" data-id="' +
       esc(id || "") +
       '"><div class="form-grid"><div class="span-2">' +
@@ -1421,18 +1540,18 @@ function jobForm(id) {
       field(
         "salary_min",
         "Gaji minimum / bulan (Rp)",
-        "number",
-        j.salary_min,
-        'min="0" max="2147483647"',
+        "text",
+        money(j.salary_min),
+        'inputmode="numeric" autocomplete="off" data-money placeholder="Contoh: 5.000.000"',
       ) +
       field(
         "salary_max",
         "Gaji maksimum / bulan (Rp)",
-        "number",
-        j.salary_max,
-        'min="0" max="2147483647"',
+        "text",
+        money(j.salary_max),
+        'inputmode="numeric" autocomplete="off" data-money placeholder="Contoh: 8.000.000"',
       ) +
-      '</div><label class="check"><input type="checkbox" name="is_salary_visible" ' +
+      '</div><p class="salary-hint" role="status"></p><label class="check"><input type="checkbox" name="is_salary_visible" ' +
       (j.is_salary_visible ? "checked" : "") +
       "> Tampilkan gaji di lowongan</label>" +
       area(
@@ -1779,12 +1898,17 @@ document.addEventListener("submit", async (event) => {
         form.dataset.id ? "PUT" : "POST",
         data,
       );
+      const thenJob = form.dataset.then === "job";
       dialog.close();
       toast("Profil perusahaan disimpan");
       await route();
+      if (thenJob) await openJobForm();
     } else if (type === "job") {
-      data.salary_min = data.salary_min === "" ? null : Number(data.salary_min);
-      data.salary_max = data.salary_max === "" ? null : Number(data.salary_max);
+      for (const k of ["salary_min", "salary_max"]) {
+        const digits = data[k].replace(/\D/g, "");
+        data[k] = digits === "" ? null : Number(digits);
+        if (data[k] > 2147483647) throw Error("Nilai gaji terlalu besar");
+      }
       data.is_salary_visible = $("[name=is_salary_visible]", form).checked;
       if (
         data.salary_min != null &&
@@ -1881,7 +2005,18 @@ document.addEventListener("click", async (event) => {
   const action = button.dataset.action,
     id = button.dataset.id;
   try {
-    if (action === "close-dialog") dialog.close();
+    if (action === "toggle-password") {
+      const input = $("input", button.parentElement),
+        show = input.type === "password";
+      input.type = show ? "text" : "password";
+      button.innerHTML = icon(show ? "eyeOff" : "eye");
+      button.setAttribute("aria-pressed", String(show));
+      button.setAttribute(
+        "aria-label",
+        show ? "Sembunyikan password" : "Tampilkan password",
+      );
+      input.focus();
+    } else if (action === "close-dialog") dialog.close();
     else if (action === "retry") await route();
     else if (action === "filters")
       $(".filter-panel").classList.toggle("visible");
@@ -1952,7 +2087,7 @@ document.addEventListener("click", async (event) => {
           toast("Kategori dihapus");
         },
       );
-    else if (action === "job-form") jobForm(id);
+    else if (action === "job-form") await openJobForm(id);
     else if (action === "toggle-job") {
       const j = state.jobs.find((x) => x.id === id);
       await confirmAction(
@@ -2026,6 +2161,54 @@ dialog.addEventListener("click", (e) => {
       dialog.close();
   }
 });
+// Kolom gaji: pemisah ribuan saat mengetik, plus peringatan untuk angka yang janggal.
+document.addEventListener("input", (e) => {
+  const el = e.target;
+  if (!el.matches?.("[data-money]")) return;
+  const before = el.value.slice(0, el.selectionStart).replace(/\D/g, "").length;
+  const digits = el.value.replace(/\D/g, "").slice(0, 10);
+  el.value = digits ? currency(digits) : "";
+  let caret = 0;
+  for (let seen = 0; caret < el.value.length && seen < before; caret++)
+    if (/\d/.test(el.value[caret])) seen++;
+  el.setSelectionRange(caret, caret);
+  const form = el.closest("form"),
+    hint = $(".salary-hint", form),
+    read = (n) => {
+      const d = $("[name=" + n + "]", form).value.replace(/\D/g, "");
+      return d === "" ? null : Number(d);
+    },
+    min = read("salary_min"),
+    max = read("salary_max");
+  if (!hint) return;
+  const low = [min, max].find((v) => v != null && v > 0 && v < 100000);
+  hint.classList.toggle(
+    "warn",
+    low != null || (min != null && max != null && min > max),
+  );
+  hint.textContent =
+    min != null && max != null && min > max
+      ? "Gaji minimum lebih besar dari gaji maksimum."
+      : low != null
+        ? "Rp" +
+          currency(low) +
+          " per bulan terlihat terlalu kecil. Periksa jumlah nolnya."
+        : min != null || max != null
+          ? "Rentang gaji: " +
+            [min, max]
+              .filter((v) => v != null)
+              .map((v) => "Rp" + currency(v))
+              .join(" – ") +
+            " per bulan."
+          : "";
+});
+for (const type of ["keydown", "keyup"])
+  document.addEventListener(type, (e) => {
+    const wrap = e.target.closest?.(".password-wrap");
+    if (!wrap || !e.getModifierState) return;
+    const warning = $(".caps-warning", wrap.parentElement);
+    if (warning) warning.hidden = !e.getModifierState("CapsLock");
+  });
 window.addEventListener("hashchange", route);
 async function loadBookmarks() {
   if (state.user && state.user.role === "user") {

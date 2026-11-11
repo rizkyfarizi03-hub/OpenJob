@@ -1,6 +1,16 @@
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/assets/fonts/inter-latin-wght-normal.woff2") format("woff2");
+}
+[hidden] {
+  display: none !important;
+}
 :root {
   --ink: #202e29;
-  --muted: #718078;
+  --muted: #5d6b63;
   --green: #155b46;
   --dark: #103f32;
   --lime: #d9f894;
@@ -9,7 +19,7 @@
   --white: #fff;
   --red: #aa3c32;
   --radius: 16px;
-  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  font-family: Inter, system-ui, "Segoe UI", Roboto, Arial, sans-serif;
   color: var(--ink);
   background: var(--bg);
   font-synthesis: none;
@@ -877,7 +887,7 @@ footer > span {
   margin-bottom: 18px;
 }
 .field label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
 }
 .field input,
@@ -889,7 +899,7 @@ footer > span {
   background: white;
   border-radius: 8px;
   color: var(--ink);
-  font-size: 13px;
+  font-size: 14px;
   min-height: 44px;
 }
 .field textarea {
@@ -1009,7 +1019,7 @@ footer > span {
   margin-bottom: 28px;
 }
 .stat {
-  padding: 23px;
+  padding: 16px 20px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: white;
@@ -1019,10 +1029,10 @@ footer > span {
   color: var(--muted);
 }
 .stat strong {
-  font-size: 30px;
+  font-size: 24px;
   font-weight: 650;
   display: block;
-  margin-top: 12px;
+  margin-top: 4px;
 }
 .stat:first-child {
   background: #eaf0e3;
@@ -1103,10 +1113,16 @@ td small {
   border: 1px solid #d8e4cd;
   padding: 15px 18px;
   border-radius: 9px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.7;
-  color: #53694b;
+  color: #45593e;
   margin-bottom: 22px;
+}
+/* Pemberitahuan yang butuh tindakan dibedakan dari info biasa. */
+.notice.warn {
+  background: #fff7e3;
+  border-color: #efdcaa;
+  color: #6a5210;
 }
 .document-row {
   display: flex;
@@ -1608,4 +1624,127 @@ dialog::backdrop {
 .recovery-panel > p {
   color: var(--muted);
   line-height: 1.7;
+}
+
+/* Kolom password: tombol tampilkan/sembunyikan dan peringatan Caps Lock. */
+.password-wrap {
+  position: relative;
+}
+.password-wrap input {
+  padding-right: 48px;
+}
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+}
+.password-toggle:hover {
+  color: var(--ink);
+  background: #f0f4ef;
+}
+.field .caps-warning {
+  font-size: 12px;
+  font-weight: 600;
+  color: #8a5a00;
+}
+
+/* Langkah awal perekrut. */
+.onboarding h2 {
+  margin-bottom: 6px;
+}
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.step {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+}
+.step:first-child {
+  border-top: 0;
+}
+.step:last-child {
+  padding-bottom: 0;
+}
+.step > div {
+  flex: 1;
+  min-width: 0;
+}
+.step strong {
+  font-size: 14px;
+}
+.step p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.step-mark {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border: 1.5px solid #cdd6c9;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--muted);
+}
+.step-mark svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.4;
+}
+.step.current .step-mark {
+  border-color: var(--green);
+  color: var(--green);
+}
+.step.done .step-mark {
+  border-color: var(--green);
+  background: var(--green);
+  color: white;
+}
+.step.done strong {
+  color: var(--muted);
+  font-weight: 600;
+}
+.step-state {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--green);
+}
+.salary-hint {
+  min-height: 20px;
+  margin: -6px 0 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.salary-hint.warn {
+  font-weight: 600;
+  color: #8a5a00;
+}
+@media (max-width: 760px) {
+  .step {
+    flex-wrap: wrap;
+  }
+  .step > div {
+    flex-basis: calc(100% - 44px);
+  }
+  .step .btn,
+  .step-state {
+    margin-left: 44px;
+  }
 }

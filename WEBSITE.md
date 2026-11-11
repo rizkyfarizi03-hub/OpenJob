@@ -333,3 +333,14 @@ Enam endpoint memakai Redis kembali, dengan header `X-Data-Source: cache` atau `
 - `GET /profile/*`, daftar lowongan, dan dashboard perekrut tetap membaca PostgreSQL langsung.
 
 Pengujian: `npm run test:cache` (PGlite dan cache memori) mencakup miss, hit, invalidasi, isolasi antar akun, dan kegagalan cache. Pengujian terhadap layanan Redis sungguhan dan collection Postman belum dijalankan pada perubahan ini.
+
+## Perbaikan alur frontend — 11 November 2026
+
+- Perekrut baru melihat tiga langkah awal (verifikasi email, profil perusahaan, lowongan pertama) sebagai ganti deretan angka nol dan tombol yang mati. Langkah itu hilang setelah lowongan pertama terpasang.
+- Tombol "Pasang Lowongan" selalu bisa diklik. Tanpa verifikasi muncul penjelasan; tanpa perusahaan, form perusahaan terbuka lalu berlanjut ke form lowongan.
+- Pemberitahuan verifikasi memakai kalimat sesuai peran. Pada demo tanpa Mailpit, pemberitahuan menjelaskan bahwa akun baru tidak bisa diverifikasi dan menyarankan akun contoh.
+- Kolom gaji memakai pemisah ribuan, menampilkan rentang yang terbaca, dan memperingatkan angka yang janggal.
+- Semua kolom password punya tombol tampilkan/sembunyikan dan peringatan Caps Lock.
+- Font Inter disertakan di `openjob_web/assets/fonts` (lisensi OFL) sehingga tampilan sama di semua perangkat; teks sekunder dibuat lebih gelap dan kartu statistik lebih ringkas.
+
+Pengujian: `npm run test:ui` dari folder utama menjalankan `openjob_web/tests/ui.test.cjs` terhadap server demo dalam memori. Pemeriksaan visual di browser baru dilakukan pada halaman daftar dan ringkasan perekrut.

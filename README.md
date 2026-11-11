@@ -83,12 +83,13 @@ npm test        # 12 tes consumer
 
 Kedua perintah berjalan tanpa layanan eksternal. Pengujian terhadap PostgreSQL, RabbitMQ, dan Mailpit sungguhan dijelaskan di [WEBSITE.md](WEBSITE.md).
 
-Format dan lint dijalankan dari folder utama:
+Format, lint, dan uji alur frontend dijalankan dari folder utama:
 
 ```powershell
 npm install
 npm run format
 npm run lint
+npm run test:ui   # alur pelamar dan perekrut di jsdom, butuh npm ci di openjob_api
 ```
 
 ## Batasan
