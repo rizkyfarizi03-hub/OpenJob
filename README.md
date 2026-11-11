@@ -75,7 +75,7 @@ Data demo disimpan di memori dan hilang ketika proses berhenti. Untuk menjalanka
 
 ```powershell
 cd openjob_api
-npm test        # 32 tes: API, cache, notifikasi, reset password, verifikasi email
+npm test        # 36 tes: API, cache, fitur pencarian, notifikasi, reset password, verifikasi email
 
 cd ../openjob_consumer
 npm test        # 12 tes consumer

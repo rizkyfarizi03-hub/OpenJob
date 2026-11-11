@@ -73,6 +73,8 @@ async function list(req, res, next) {
       status: Joi.string().valid("open", "close", "all").default("open"),
       // Lowongan yang dipublikasikan dalam N hari terakhir.
       posted: Joi.string().valid("1", "7", "30").allow(""),
+      min_salary: Joi.number().integer().min(0).max(2147483647),
+      sort: Joi.string().valid("newest", "salary").default("newest"),
       page: Joi.number().integer().min(1).max(100000).default(1),
       limit: Joi.number().integer().min(1).max(50).default(12),
     }).validate(req.query);
@@ -87,6 +89,12 @@ async function list(req, res, next) {
     if (q["company-name"]) add("c.name ILIKE ?", `%${q["company-name"]}%`);
     if (q.location) add("j.location_city ILIKE ?", `%${q.location}%`);
     if (q.status !== "all") add("j.status = ?", q.status);
+    // Gaji tersembunyi tidak ikut cocok, supaya nominalnya tidak bisa ditebak lewat filter.
+    if (q.min_salary)
+      add(
+        "j.is_salary_visible AND COALESCE(j.salary_max,j.salary_min) >= ?",
+        q.min_salary,
+      );
     if (q.posted)
       add(
         "j.created_at >= NOW() - (?::int * INTERVAL '1 day')",
@@ -102,8 +110,12 @@ async function list(req, res, next) {
       `SELECT COUNT(*)::int AS total ${from}${clause}`,
       values,
     );
+    const order =
+      q.sort === "salary"
+        ? "(CASE WHEN j.is_salary_visible THEN COALESCE(j.salary_max,j.salary_min) END) DESC NULLS LAST,"
+        : "";
     const result = await pool.query(
-      `SELECT ${fields} ${from}${clause} ORDER BY j.created_at DESC,j.id LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
+      `SELECT ${fields} ${from}${clause} ORDER BY ${order}j.created_at DESC,j.id LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
       [...values, q.limit, (q.page - 1) * q.limit],
     );
     res.json({

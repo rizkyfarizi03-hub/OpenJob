@@ -474,6 +474,13 @@ async function listing(params) {
       params.get("experience_level"),
       "Semua level",
     ) +
+    field(
+      "min_salary",
+      "Gaji minimum / bulan (Rp)",
+      "text",
+      money(params.get("min_salary")),
+      'inputmode="numeric" autocomplete="off" data-money placeholder="Contoh: 5.000.000"',
+    ) +
     select(
       "posted",
       "Waktu tayang",
@@ -489,7 +496,9 @@ async function listing(params) {
     link("#/jobs", "Reset filter", "btn ghost full") +
     '</form></aside><section><div class="results-head"><span><strong>' +
     p.total +
-    '</strong> lowongan ditemukan</span><span class="muted">Terbaru lebih dahulu</span></div><div class="job-grid">' +
+    '</strong> lowongan ditemukan</span><label class="sort">Urutkan<select id="job-sort"><option value="newest">Terbaru</option><option value="salary" ' +
+    (params.get("sort") === "salary" ? "selected" : "") +
+    '>Gaji tertinggi</option></select></label></div><div class="job-grid">' +
     (d.jobs.length
       ? d.jobs.map(card).join("")
       : empty(
@@ -1674,9 +1683,29 @@ async function apply(id) {
       "</button></form>",
   );
 }
-function applicationDetail(id) {
-  const a = state.applications.find((x) => x.id === id);
-  if (!a) return;
+const timeline = (history) =>
+  '<ol class="timeline">' +
+  history
+    .map(
+      (h, i) =>
+        '<li class="' +
+        (i === history.length - 1 ? "latest " : "") +
+        esc(h.status) +
+        '"><strong>' +
+        esc(label(h.status)) +
+        "</strong><small>" +
+        esc(dateTime(h.at)) +
+        "</small></li>",
+    )
+    .join("") +
+  "</ol>";
+async function applicationDetail(id) {
+  const listed = state.applications.find((x) => x.id === id);
+  if (!listed) return;
+  // Detail memuat riwayat tahap; data daftar dipakai bila detail gagal dimuat.
+  const a = await api("/applications/" + encodeURIComponent(id)).catch(
+    () => listed,
+  );
   const recruiter = state.user.role !== "user",
     active = ["pending", "reviewing", "interview"].includes(a.status);
   showDialog(
@@ -1688,10 +1717,13 @@ function applicationDetail(id) {
       " · Dikirim " +
       date(a.created_at) +
       "</p>" +
-      status(a.status) +
-      '<p class="muted tiny">Pembaruan terakhir: ' +
-      esc(dateTime(a.updated_at || a.created_at)) +
-      '</p><div class="divider"></div><p class="detail-description">' +
+      (a.history
+        ? timeline(a.history)
+        : status(a.status) +
+          '<p class="muted tiny">Pembaruan terakhir: ' +
+          esc(dateTime(a.updated_at || a.created_at)) +
+          "</p>") +
+      '<div class="divider"></div><p class="detail-description">' +
       esc(a.cover_letter || "Tidak ada pesan tambahan.") +
       "</p>" +
       (a.document_id && a.status !== "withdrawn"
@@ -1846,8 +1878,9 @@ document.addEventListener("submit", async (event) => {
         ? new URLSearchParams(location.hash.split("?")[1])
         : new URLSearchParams();
     p.delete("page");
-    for (const [k, v] of Object.entries(data)) {
-      if (v.trim()) p.set(k, v.trim());
+    for (const [k, raw] of Object.entries(data)) {
+      const v = k === "min_salary" ? raw.replace(/\D/g, "") : raw.trim();
+      if (v) p.set(k, v);
       else p.delete(k);
     }
     const hash = "#/jobs?" + p;
@@ -2177,7 +2210,7 @@ document.addEventListener("click", async (event) => {
           toast("Dokumen dihapus");
         },
       );
-    else if (action === "application-detail") applicationDetail(id);
+    else if (action === "application-detail") await applicationDetail(id);
     else if (action === "withdraw")
       await confirmAction(
         "Tarik lamaran?",
@@ -2194,6 +2227,13 @@ document.addEventListener("click", async (event) => {
   }
 });
 document.addEventListener("change", (e) => {
+  if (e.target.id === "job-sort") {
+    const p = new URLSearchParams(location.hash.split("?")[1]);
+    p.delete("page");
+    if (e.target.value === "salary") p.set("sort", "salary");
+    else p.delete("sort");
+    location.hash = "#/jobs" + (p.size ? "?" + p : "");
+  }
   if (
     e.target.id === "applicant-filter" ||
     e.target.id === "applicant-status-filter"
@@ -2230,14 +2270,14 @@ document.addEventListener("input", (e) => {
     if (/\d/.test(el.value[caret])) seen++;
   el.setSelectionRange(caret, caret);
   const form = el.closest("form"),
-    hint = $(".salary-hint", form),
-    read = (n) => {
+    hint = $(".salary-hint", form);
+  if (!hint) return;
+  const read = (n) => {
       const d = $("[name=" + n + "]", form).value.replace(/\D/g, "");
       return d === "" ? null : Number(d);
     },
     min = read("salary_min"),
     max = read("salary_max");
-  if (!hint) return;
   const low = [min, max].find((v) => v != null && v > 0 && v < 100000);
   hint.classList.toggle(
     "warn",

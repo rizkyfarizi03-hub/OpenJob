@@ -25,7 +25,7 @@ Consumer menjalankan proses tersendiri dari `../openjob_consumer`. **Tidak ada i
 - `npm run publisher`: jalankan outbox dispatcher saja, **alternatif** untuk mode API yang tidak otomatis menyalakan publisher. Jangan jalankan publisher terpisah kecuali diperlukan.
 - `npm run migrate`: jalankan migrasi PostgreSQL.
 - `npm run test:unit`: pengujian publisher/queue dengan mock tanpa layanan eksternal.
-- `npm test`: 32 tes API/publisher dan integrasi dengan PGlite sementara; tidak memerlukan PostgreSQL asli atau port 3000. Postman lama tersedia melalui `npm run test:legacy`.
+- `npm test`: 36 tes API/publisher dan integrasi dengan PGlite sementara; tidak memerlukan PostgreSQL asli atau port 3000. Postman lama tersedia melalui `npm run test:legacy`.
 - `npm run test:normal-start`: uji kode utama API dan consumer sebagai proses terpisah pada PostgreSQL Docker QA, tanpa mock modul; membutuhkan PostgreSQL QA, RabbitMQ, dan Mailpit lokal serta port 3102 kosong.
 
 ## Penting saat menguji

@@ -225,6 +225,8 @@ test("OpenJob website: authentication, privacy, search and recruitment lifecycle
       assert.equal(r.body.data.jobs[0].salary_min, null);
       assert.equal((await call("/jobs?page=0")).code, 400);
       assert.equal((await call("/jobs?posted=2")).code, 400);
+      assert.equal((await call("/jobs?sort=random")).code, 400);
+      assert.equal((await call("/jobs?min_salary=-1")).code, 400);
       assert.equal(
         (await call("/jobs?posted=1")).body.data.pagination.total,
         (await call("/jobs")).body.data.pagination.total,

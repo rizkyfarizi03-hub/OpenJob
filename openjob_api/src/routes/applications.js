@@ -199,7 +199,20 @@ router.get("/:id", async (req, res, next) => {
           select + " WHERE a.id=$1 AND (a.user_id=$2 OR j.owner_id=$2)",
           [req.params.id, req.userId],
         );
-        return rows.length ? { status: "success", data: rows[0] } : null;
+        if (!rows.length) return null;
+        // Riwayat tahap: dikirim, setiap perubahan oleh perekrut, lalu penarikan bila ada.
+        const application = rows[0];
+        const changes = await pool.query(
+          "SELECT status,created_at FROM application_status_outbox WHERE application_id=$1 ORDER BY created_at,id",
+          [application.id],
+        );
+        const history = [
+          { status: "pending", at: application.created_at },
+          ...changes.rows.map((c) => ({ status: c.status, at: c.created_at })),
+        ];
+        if (application.status === "withdrawn")
+          history.push({ status: "withdrawn", at: application.updated_at });
+        return { status: "success", data: { ...application, history } };
       },
       "Lamaran tidak ditemukan",
     );

@@ -242,6 +242,50 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   assert.equal($(".stats").hidden, true);
   ok("applicant dashboard");
 
+  // Riwayat tahap lamaran dan pengurutan gaji untuk pelamar contoh.
+  await logout();
+  await sb.pool.query(
+    "INSERT INTO documents(id,user_id,filename,original_name,mime_type,size) VALUES('doc-ui','demo-applicant','doc-ui.pdf','cv.pdf','application/pdf',10)",
+  );
+  await sb.pool.query(
+    "INSERT INTO applications(id,user_id,job_id,document_id,status) VALUES('app-ui','demo-applicant','demo-job-2','doc-ui','reviewing')",
+  );
+  await sb.pool.query(
+    "INSERT INTO application_status_outbox(id,application_id,status) VALUES('11111111-1111-4111-8111-111111111111','app-ui','reviewing')",
+  );
+  await go("#/login");
+  fill("#email", "pelamar@example.com");
+  fill("#password", "DemoOpenJob123!");
+  $("[data-form=login]").requestSubmit();
+  await until(
+    () => w.location.hash === "#/account" && $("table"),
+    "demo applicant",
+  );
+  $("[data-action=application-detail]").click();
+  await until(() => $(".timeline"), "timeline");
+  assert.deepEqual(
+    $$(".timeline strong").map((x) => x.textContent),
+    ["Terkirim", "Ditinjau"],
+  );
+  assert.ok($(".timeline li:last-child").classList.contains("latest"));
+  $("#dialog").close();
+  await go("#/jobs?sort=salary");
+  assert.equal($("#job-sort").value, "salary");
+  assert.equal($(".job-card h3").textContent, "Backend Developer");
+  fill("#min_salary", "11000000");
+  assert.equal($("#min_salary").value, "11.000.000");
+  $("[data-form=filters]").requestSubmit();
+  await until(
+    () => w.location.hash.includes("min_salary=11000000") && !$(".loading"),
+    "salary filter",
+  );
+  await sleep(200);
+  assert.ok(
+    text(".results-head").startsWith("4 lowongan"),
+    text(".results-head"),
+  );
+  ok("status timeline, salary sort and filter");
+
   // 8. seeded recruiter is unaffected
   await logout();
   await go("#/login");
