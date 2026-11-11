@@ -12,12 +12,10 @@ module.exports = async (req, res, next) => {
     );
     if (!payload.id || !payload.sid) throw Error("Missing session");
   } catch {
-    return res
-      .status(401)
-      .json({
-        status: "failed",
-        message: "Sesi berakhir. Silakan masuk kembali.",
-      });
+    return res.status(401).json({
+      status: "failed",
+      message: "Sesi berakhir. Silakan masuk kembali.",
+    });
   }
   try {
     const result = await pool.query(

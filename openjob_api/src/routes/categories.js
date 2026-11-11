@@ -146,12 +146,10 @@ router.delete("/:id", verifyToken, async (req, res, next) => {
     });
   } catch (error) {
     if (["23503", "23001"].includes(error.code))
-      return res
-        .status(409)
-        .json({
-          status: "failed",
-          message: "Kategori masih digunakan oleh lowongan",
-        });
+      return res.status(409).json({
+        status: "failed",
+        message: "Kategori masih digunakan oleh lowongan",
+      });
     next(error);
   }
 });

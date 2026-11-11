@@ -224,6 +224,25 @@ test("OpenJob website: authentication, privacy, search and recruitment lifecycle
       assert.equal(r.body.data.pagination.total, 1);
       assert.equal(r.body.data.jobs[0].salary_min, null);
       assert.equal((await call("/jobs?page=0")).code, 400);
+      assert.equal((await call("/jobs?posted=2")).code, 400);
+      assert.equal(
+        (await call("/jobs?posted=1")).body.data.pagination.total,
+        (await call("/jobs")).body.data.pagination.total,
+      );
+      await sandbox.pool.query(
+        "UPDATE jobs SET created_at=NOW()-INTERVAL '10 days' WHERE id=$1",
+        [job],
+      );
+      const recent = async (days) =>
+        (await call("/jobs?posted=" + days)).body.data.jobs.some(
+          (x) => x.id === job,
+        );
+      assert.equal(await recent(7), false);
+      assert.equal(await recent(30), true);
+      await sandbox.pool.query("UPDATE jobs SET created_at=NOW() WHERE id=$1", [
+        job,
+      ]);
+      assert.equal((await call("/jobs/" + job)).body.data.applicant_count, 0);
       assert.equal(
         (await call("/jobs?location_type=remote")).body.data.pagination.total,
         0,

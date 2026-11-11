@@ -27,14 +27,12 @@ const roles =
   };
 const verified = (req, res, next) => {
   if (!req.account.email_verified_at)
-    return res
-      .status(403)
-      .json({
-        status: "failed",
-        code: "EMAIL_VERIFICATION_REQUIRED",
-        message:
-          "Verifikasi email Anda sebelum melamar atau menerbitkan lowongan.",
-      });
+    return res.status(403).json({
+      status: "failed",
+      code: "EMAIL_VERIFICATION_REQUIRED",
+      message:
+        "Verifikasi email Anda sebelum melamar atau menerbitkan lowongan.",
+    });
   next();
 };
 module.exports = { identity, roles, verified };

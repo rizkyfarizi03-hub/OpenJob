@@ -62,13 +62,11 @@ router.post("/", verify, async (req, res, next) => {
     );
     if (!recent.rowCount) await requests.enqueue(db, user);
     await db.query("COMMIT");
-    res
-      .status(202)
-      .json({
-        status: "success",
-        message:
-          "Email verifikasi telah dijadwalkan. Periksa kotak masuk Anda. Jika baru meminta email, tunggu satu menit sebelum mengirim ulang.",
-      });
+    res.status(202).json({
+      status: "success",
+      message:
+        "Email verifikasi telah dijadwalkan. Periksa kotak masuk Anda. Jika baru meminta email, tunggu satu menit sebelum mengirim ulang.",
+    });
   } catch (e) {
     if (db) await db.query("ROLLBACK").catch(() => {});
     next(e);

@@ -1774,3 +1774,16 @@ dialog::backdrop {
 .results-head.spaced {
   margin-top: 24px;
 }
+.applicant-count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--green);
+}
+.applicant-count svg {
+  width: 17px;
+  height: 17px;
+}

@@ -36,17 +36,15 @@ router.post("/", roles("user"), upload, async (req, res, next) => {
         file.size,
       ],
     );
-    res
-      .status(201)
-      .json({
-        status: "success",
-        data: {
-          documentId: id,
-          filename: file.filename,
-          originalName: file.originalname,
-          size: file.size,
-        },
-      });
+    res.status(201).json({
+      status: "success",
+      data: {
+        documentId: id,
+        filename: file.filename,
+        originalName: file.originalname,
+        size: file.size,
+      },
+    });
   } catch (e) {
     await fs.unlink(file.path).catch(() => {});
     if (e.code === "PDF_VALIDATION_TIMEOUT") {

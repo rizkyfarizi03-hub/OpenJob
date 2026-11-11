@@ -71,6 +71,8 @@ async function list(req, res, next) {
       location_type: Joi.string().allow(""),
       experience_level: Joi.string().allow(""),
       status: Joi.string().valid("open", "close", "all").default("open"),
+      // Lowongan yang dipublikasikan dalam N hari terakhir.
+      posted: Joi.string().valid("1", "7", "30").allow(""),
       page: Joi.number().integer().min(1).max(100000).default(1),
       limit: Joi.number().integer().min(1).max(50).default(12),
     }).validate(req.query);
@@ -85,6 +87,11 @@ async function list(req, res, next) {
     if (q["company-name"]) add("c.name ILIKE ?", `%${q["company-name"]}%`);
     if (q.location) add("j.location_city ILIKE ?", `%${q.location}%`);
     if (q.status !== "all") add("j.status = ?", q.status);
+    if (q.posted)
+      add(
+        "j.created_at >= NOW() - (?::int * INTERVAL '1 day')",
+        Number(q.posted),
+      );
     for (const key of ["job_type", "location_type", "experience_level"])
       if (q[key]) add(`j.${key} = ?`, q[key]);
     if (q.category || req.params.categoryId)
@@ -121,7 +128,10 @@ router.get("/category/:categoryId", list);
 router.get("/:id", async (req, res, next) => {
   try {
     const { rows } = await pool.query(
-      `SELECT ${fields} ${from} WHERE j.id=$1`,
+      `SELECT ${fields},
+       (SELECT COUNT(*)::int FROM applications a
+         WHERE a.job_id=j.id AND a.status<>'withdrawn') AS applicant_count
+       ${from} WHERE j.id=$1`,
       [req.params.id],
     );
     if (!rows.length) return fail(res, 404, "Lowongan tidak ditemukan");
@@ -165,13 +175,11 @@ async function save(req, res, next) {
       (editing && current.status !== "open" && merged.status === "open");
     if (publishing && !account.rows[0]?.email_verified_at) {
       await db.query("ROLLBACK");
-      return res
-        .status(403)
-        .json({
-          status: "failed",
-          code: "EMAIL_VERIFICATION_REQUIRED",
-          message: "Verifikasi email Anda sebelum menerbitkan lowongan.",
-        });
+      return res.status(403).json({
+        status: "failed",
+        code: "EMAIL_VERIFICATION_REQUIRED",
+        message: "Verifikasi email Anda sebelum menerbitkan lowongan.",
+      });
     }
     if (
       merged.salary_min != null &&

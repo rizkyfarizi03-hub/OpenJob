@@ -100,7 +100,15 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   await go("#/jobs?page=2");
   assert.ok(cardFor("Product Designer").textContent.includes("1 minggu lalu"));
   assert.equal(cardFor("Product Designer").querySelector(".tag.new"), null);
+  // Filter waktu tayang dan jumlah pelamar.
+  await go("#/jobs?posted=7");
+  assert.ok(text(".results-head").startsWith("8 lowongan"));
+  assert.equal($("#posted").value, "7");
   await go("#/jobs/demo-job-1");
+  assert.equal(
+    text(".applicant-count"),
+    "Belum ada pelamar. Jadilah yang pertama.",
+  );
   assert.ok(text(".detail-summary").includes("1 minggu lalu ·"));
   ok("job age and new badge");
   // 1. password toggle + caps lock

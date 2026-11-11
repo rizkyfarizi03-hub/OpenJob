@@ -474,6 +474,17 @@ async function listing(params) {
       params.get("experience_level"),
       "Semua level",
     ) +
+    select(
+      "posted",
+      "Waktu tayang",
+      [
+        ["1", "24 jam terakhir"],
+        ["7", "7 hari terakhir"],
+        ["30", "30 hari terakhir"],
+      ],
+      params.get("posted"),
+      "Semua waktu",
+    ) +
     '<button class="btn full">Terapkan filter</button>' +
     link("#/jobs", "Reset filter", "btn ghost full") +
     '</form></aside><section><div class="results-head"><span><strong>' +
@@ -505,6 +516,13 @@ async function listing(params) {
     "</section></div></div>"
   );
 }
+// Jumlah kecil dibulatkan agar tidak menebak siapa pelamarnya dan tidak mematahkan semangat.
+const applicantCount = (n) =>
+  n === 0
+    ? "Belum ada pelamar. Jadilah yang pertama."
+    : n < 5
+      ? "Kurang dari 5 pelamar sejauh ini."
+      : currency(n) + " pelamar sejauh ini.";
 async function jobDetail(id) {
   const j = await api("/jobs/" + encodeURIComponent(id));
   let a;
@@ -555,7 +573,14 @@ async function jobDetail(id) {
       "Lihat profil perusahaan " + icon("arrow"),
       "text-link",
     ) +
-    '</section></div><aside class="sticky"><div class="panel"><h2>Langkah baru Anda?</h2><p class="muted tiny">Kenali perannya. Siapkan CV terbaik. Mulai perjalanan berikutnya.</p><div class="stack">' +
+    '</section></div><aside class="sticky"><div class="panel"><h2>Langkah baru Anda?</h2><p class="muted tiny">Kenali perannya. Siapkan CV terbaik. Mulai perjalanan berikutnya.</p>' +
+    (j.status === "open" && j.applicant_count != null
+      ? '<p class="applicant-count">' +
+        icon("users") +
+        applicantCount(j.applicant_count) +
+        "</p>"
+      : "") +
+    '<div class="stack">' +
     (a
       ? '<div class="notice">Lamaran Anda: ' +
         esc(label(a.status)) +
