@@ -355,3 +355,12 @@ Pengujian: `npm run test:ui` dari folder utama menjalankan `openjob_web/tests/ui
 - **Halaman lowongan.** Form pasang/edit lowongan pindah dari dialog ke `#/employer/jobs/new` dan `#/employer/jobs/:id/edit`, dengan pratinjau kartu yang mengikuti isian.
 
 Database yang sudah ada perlu `npm run migrate` untuk fitur logo. Pengujian: `tests/features.integration.cjs` dan `npm run test:ui`, keduanya memakai PGlite; penyimpanan `bytea` belum diuji pada PostgreSQL sungguhan.
+
+## Mode Vercel — 14 November 2026
+
+- `api/index.js` menyusun API dan fungsi kirim email consumer dalam satu fungsi tanpa RabbitMQ dan Redis. Email dikirim setelah respons lewat `waitUntil`, dengan tabel outbox dan aturan retry yang sama. Panduan: [DEPLOY-VERCEL.md](DEPLOY-VERCEL.md).
+- `OPENJOB_DOCUMENT_STORAGE=database` menyimpan CV di tabel `document_files` (migrasi `1793600000000_document_files.js`). Bawaannya tetap folder.
+- `DATABASE_URL` (opsional) didukung oleh API dan consumer; tanpa itu tetap memakai variabel `PG*`.
+- `OPENJOB_PUBLIC_DEMO=1` mengunci email dan password akun contoh serta menampilkan banner demo.
+- Pendaftaran dibatasi 10 kali per 15 menit per IP di semua mode.
+- Data contoh dipindah ke `openjob_api/dev/demoSeed.cjs` agar bisa dipakai saat build tanpa PGlite.

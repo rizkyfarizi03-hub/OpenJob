@@ -46,6 +46,7 @@ api.get("/health", (req, res) => {
     status: "success",
     demo: process.env.OPENJOB_DEMO === "1",
     localQa: process.env.OPENJOB_LOCAL_QA === "1",
+    publicDemo: process.env.OPENJOB_PUBLIC_DEMO === "1",
     features: {
       passwordReset: true,
       emailVerification: true,

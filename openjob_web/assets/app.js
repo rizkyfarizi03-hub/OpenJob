@@ -823,8 +823,12 @@ function auth(register, p) {
           "",
         )) +
     "</p>" +
-    (state.demo
-      ? '<div class="notice">Mode demo · password <strong>DemoOpenJob123!</strong><br>Pelamar: pelamar@example.com<br>Perekrut: perekrut@example.com<br>Data demo hilang saat server dihentikan.</div>'
+    (state.demo || state.publicDemo
+      ? '<div class="notice">Akun contoh · password <strong>DemoOpenJob123!</strong><br>Pelamar: pelamar@example.com<br>Perekrut: perekrut@example.com<br>' +
+        (state.publicDemo
+          ? "Akun contoh dipakai bersama pengunjung lain."
+          : "Data demo hilang saat server dihentikan.") +
+        "</div>"
       : "") +
     "</section></div>"
   );
@@ -2452,8 +2456,12 @@ async function start() {
   try {
     const health = await api("/health");
     state.demo = health.demo;
+    state.publicDemo = health.publicDemo;
     state.features = health.features || {};
-    if (health.localQa)
+    if (health.publicDemo)
+      $("#demo-banner").textContent =
+        "DEMO PORTOFOLIO · Data bisa diubah pengunjung lain dan direset sewaktu-waktu. Jangan unggah CV atau data pribadi asli.";
+    else if (health.localQa)
       $("#demo-banner").textContent =
         "PENGUJIAN LOKAL · Data tersimpan setelah restart. Gunakan akun dan CV buatan. Email masuk ke Mailpit lokal (port 8025), bukan ke inbox asli.";
     else if (state.demo)

@@ -449,16 +449,23 @@ test("OpenJob website: authentication, privacy, search and recruitment lifecycle
         encrypted.context.obj({ Filter: "Standard" }),
       );
       assert.equal((await upload(await encrypted.save())).code, 400);
-      const original = sandbox.pool.query;
-      sandbox.pool.query = async (sql, ...args) => {
-        if (sql.startsWith("INSERT INTO documents"))
-          throw Error("Simulated database failure");
-        return original(sql, ...args);
+      // Penyimpanan dokumen berjalan dalam transaksi, jadi kegagalan disimulasikan pada koneksinya.
+      const original = sandbox.pool.connect;
+      sandbox.pool.connect = async () => {
+        const client = await original();
+        return {
+          ...client,
+          query: async (sql, ...args) => {
+            if (String(sql).startsWith("INSERT INTO documents"))
+              throw Error("Simulated database failure");
+            return client.query(sql, ...args);
+          },
+        };
       };
       try {
         assert.equal((await upload(validPdf)).code, 500);
       } finally {
-        sandbox.pool.query = original;
+        sandbox.pool.connect = original;
       }
       assert.deepEqual(
         (await fs.readdir(sandbox.uploadDirectory)).sort(),

@@ -2,7 +2,7 @@
 
 Platform lowongan kerja dengan dua peran: pelamar mencari lowongan dan melamar dengan CV, perekrut memasang lowongan dan mengelola proses seleksi. Proyek ini berawal dari submission kelas Belajar Fundamental Back-End dengan JavaScript (Dicoding), lalu dikembangkan menjadi website lengkap.
 
-Status: berjalan dan teruji di lingkungan lokal. Belum di-hosting.
+Status: berjalan dan teruji di lingkungan lokal. Mode demo untuk Vercel sudah tersedia dan teruji secara lokal; panduannya ada di [DEPLOY-VERCEL.md](DEPLOY-VERCEL.md).
 
 ## Fitur
 
@@ -39,6 +39,8 @@ Browser ──► openjob_api (Express) ──► PostgreSQL
 | `openjob_web` | Frontend HTML, CSS, dan JavaScript tanpa proses build |
 
 API dan consumer adalah dua aplikasi Node.js independen. Keduanya tidak saling mengimpor kode dan hanya berbagi database serta broker.
+
+Untuk demo online, `api/index.js` menyusun API dan fungsi kirim email consumer dalam satu fungsi Vercel tanpa RabbitMQ dan Redis, dengan CV disimpan di PostgreSQL. Penjelasannya ada di [DEPLOY-VERCEL.md](DEPLOY-VERCEL.md).
 
 Beberapa keputusan teknis:
 
@@ -89,12 +91,13 @@ Format, lint, dan uji alur frontend dijalankan dari folder utama:
 npm install
 npm run format
 npm run lint
-npm run test:ui   # alur pelamar dan perekrut di jsdom, butuh npm ci di openjob_api
+npm run test:ui       # alur pelamar dan perekrut di jsdom, butuh npm ci di openjob_api
+npm run test:vercel   # mode Vercel dengan PostgreSQL dan SMTP tiruan
 ```
 
 ## Batasan
 
-- Belum ada hosting, domain, HTTPS, atau SMTP produksi.
+- Mode Vercel belum pernah di-deploy sungguhan; pengujiannya memakai PostgreSQL dan SMTP tiruan.
 - Token sesi disimpan di `sessionStorage`; cookie HttpOnly perlu dipertimbangkan sebelum dipublikasikan.
 - Pembatasan percobaan login dan reset password disimpan di memori proses, sehingga belum cocok untuk lebih dari satu instance API.
 - Belum ada dashboard admin, unggah logo perusahaan, atau penjadwalan wawancara.
@@ -102,6 +105,7 @@ npm run test:ui   # alur pelamar dan perekrut di jsdom, butuh npm ci di openjob_
 ## Dokumentasi lain
 
 - [MENJALANKAN-OPENJOB.md](MENJALANKAN-OPENJOB.md): konfigurasi dan cara menjalankan tiap mode.
+- [DEPLOY-VERCEL.md](DEPLOY-VERCEL.md): deploy demo publik ke Vercel.
 - [WEBSITE.md](WEBSITE.md): catatan pengembangan website, kontrak API, dan hasil pengujian.
 - [BACKUP-PEMULIHAN.md](BACKUP-PEMULIHAN.md): backup dan uji pemulihan lingkungan QA.
 - [docs/SUBMISSION-V2.md](docs/SUBMISSION-V2.md): dokumentasi submission Dicoding yang asli.

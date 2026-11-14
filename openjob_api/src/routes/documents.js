@@ -1,31 +1,31 @@
 const router = require("express").Router();
-const path = require("path");
-const fs = require("fs/promises");
 const { randomUUID } = require("crypto");
 const pool = require("../database");
 const verify = require("../middlewares/verifyToken");
 const { identity, roles } = require("../middlewares/access");
 const upload = require("../middlewares/uploadDocument");
-const directory =
-  process.env.OPENJOB_UPLOAD_DIRECTORY ||
-  path.resolve(__dirname, "../../uploads/documents");
+const store = require("../documentStore");
 const fail = (res, code, message) =>
   res.status(code).json({ status: "failed", message });
 router.use(verify, identity);
 router.post("/", roles("user"), upload, async (req, res, next) => {
   const file = req.file,
     id = randomUUID();
+  store.prepare(file);
+  let db;
   try {
-    const valid = await require("../validatePdf")(await fs.readFile(file.path));
+    const valid = await require("../validatePdf")(await store.read(file));
     if (!valid) {
-      await fs.unlink(file.path);
+      await store.discard(file);
       return fail(
         res,
         400,
         "PDF tidak valid, rusak, kosong, atau terkunci. Unggah PDF tanpa password.",
       );
     }
-    await pool.query(
+    db = await pool.connect();
+    await db.query("BEGIN");
+    await db.query(
       "INSERT INTO documents(id,user_id,filename,original_name,mime_type,size) VALUES($1,$2,$3,$4,$5,$6)",
       [
         id,
@@ -36,6 +36,8 @@ router.post("/", roles("user"), upload, async (req, res, next) => {
         file.size,
       ],
     );
+    await store.save(db, file);
+    await db.query("COMMIT");
     res.status(201).json({
       status: "success",
       data: {
@@ -46,7 +48,8 @@ router.post("/", roles("user"), upload, async (req, res, next) => {
       },
     });
   } catch (e) {
-    await fs.unlink(file.path).catch(() => {});
+    if (db) await db.query("ROLLBACK").catch(() => {});
+    await store.discard(file).catch(() => {});
     if (e.code === "PDF_VALIDATION_TIMEOUT") {
       res.set("Retry-After", "5");
       return fail(
@@ -56,6 +59,8 @@ router.post("/", roles("user"), upload, async (req, res, next) => {
       );
     }
     next(e);
+  } finally {
+    db?.release();
   }
 });
 router.get("/", roles("user"), async (req, res, next) => {
@@ -89,10 +94,9 @@ router.get("/:id", async (req, res, next) => {
       "Cache-Control": "private, no-store",
       "X-Content-Type-Options": "nosniff",
     });
-    res.sendFile(path.join(directory, rows[0].filename), (err) => {
-      if (err && !res.headersSent)
-        fail(res, 404, "Berkas dokumen tidak ditemukan");
-    });
+    await store.send(res, rows[0].filename, () =>
+      fail(res, 404, "Berkas dokumen tidak ditemukan"),
+    );
   } catch (e) {
     next(e);
   }

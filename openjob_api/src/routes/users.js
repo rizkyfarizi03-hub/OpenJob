@@ -18,7 +18,27 @@ const email = Joi.string().trim().lowercase().email();
 const name = Joi.string().trim().min(1).max(255);
 const fail = (res, code, message) =>
   res.status(code).json({ status: "failed", message });
+// Pendaftaran mengirim email, jadi dibatasi per alamat IP agar tidak dipakai untuk spam.
+const registrations = new Map();
+function registrationLimited(req, res) {
+  const now = Date.now();
+  for (const [key, entry] of registrations)
+    if (entry.until <= now) registrations.delete(key);
+  const entry = registrations.get(req.ip) || {
+    count: 0,
+    until: now + 15 * 60000,
+  };
+  if (entry.count >= 10) {
+    res.set("Retry-After", String(Math.ceil((entry.until - now) / 1000)));
+    fail(res, 429, "Terlalu banyak pendaftaran. Silakan coba lagi nanti.");
+    return true;
+  }
+  entry.count++;
+  registrations.set(req.ip, entry);
+  return false;
+}
 router.post("/", async (req, res, next) => {
+  if (registrationLimited(req, res)) return;
   const { error, value } = Joi.object({
     name: name.required(),
     email: email.required(),
@@ -105,6 +125,19 @@ router.put("/:id", verify, async (req, res, next) => {
     const sensitive =
       !!value.password ||
       (value.email !== undefined && value.email !== user.email);
+    // Akun contoh di demo publik dipakai bersama, jadi email dan password-nya dikunci.
+    if (
+      sensitive &&
+      process.env.OPENJOB_PUBLIC_DEMO === "1" &&
+      user.id.startsWith("demo-")
+    ) {
+      await client.query("ROLLBACK");
+      return fail(
+        res,
+        403,
+        "Email dan password akun contoh tidak bisa diubah di demo publik. Daftar akun baru untuk mencoba fitur ini.",
+      );
+    }
     if (
       sensitive &&
       (!value.current_password ||
