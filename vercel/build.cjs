@@ -3,9 +3,12 @@
 const fs = require("fs");
 const path = require("path");
 
-// Folder keluaran sengaja kosong: semua halaman dilayani oleh fungsi api/index.js,
-// sehingga berkas sumber di repository tidak ikut tersaji.
-fs.mkdirSync(path.join(__dirname, "public"), { recursive: true });
+// Folder keluaran hanya berisi robots.txt: semua halaman lain dilayani oleh fungsi
+// api/index.js, sehingga berkas sumber di repository tidak ikut tersaji. Vercel
+// menolak folder keluaran yang kosong.
+const output = path.join(__dirname, "public");
+fs.mkdirSync(output, { recursive: true });
+fs.writeFileSync(path.join(output, "robots.txt"), "User-agent: *\nAllow: /\n");
 
 if (!process.env.DATABASE_URL) {
   console.error(

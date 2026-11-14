@@ -82,6 +82,11 @@ const ok = (m) => console.log("ok", ++n, m);
     if (i === 0) assert.match(build.stdout, /Data contoh dibuat/);
     else assert.doesNotMatch(build.stdout, /Data contoh dibuat/);
   }
+  // Vercel menolak folder keluaran kosong.
+  assert.deepEqual(
+    require("node:fs").readdirSync(path.join(root, "vercel/public")),
+    ["robots.txt"],
+  );
   const noDb = await run(["vercel/build.cjs"], { ...env, DATABASE_URL: "" });
   assert.notEqual(noDb.status, 0);
   assert.match(noDb.stderr, /DATABASE_URL belum diatur/);
