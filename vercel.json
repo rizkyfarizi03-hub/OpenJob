@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
+  "regions": ["sin1"],
   "installCommand": "npm ci --omit=dev && npm ci --omit=dev --prefix openjob_api && npm ci --omit=dev --prefix openjob_consumer",
   "buildCommand": "node vercel/build.cjs",
   "outputDirectory": "vercel/public",
@@ -10,5 +11,10 @@
       "maxDuration": 30
     }
   },
-  "rewrites": [{ "source": "/(.*)", "destination": "/api" }]
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api"
+    }
+  ]
 }

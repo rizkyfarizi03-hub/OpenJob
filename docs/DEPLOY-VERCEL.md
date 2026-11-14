@@ -34,6 +34,8 @@ Jangan klik Deploy dulu jika halaman itu meminta environment variable; isi dahul
 
 Di project Vercel buka tab **Storage → Create Database → Neon**, lalu hubungkan ke project ini. Integrasi tersebut mengisi `DATABASE_URL` secara otomatis. Pilih region database yang dekat dengan region fungsi Vercel.
 
+`vercel.json` menjalankan fungsi di region Singapore (`sin1`). Bila database Anda di region lain, ubah `regions` di `vercel.json` ke region terdekat dengan database; paket Hobby hanya boleh satu region.
+
 Saat build, `vercel/build.cjs` menjalankan semua migrasi. Jika `OPENJOB_PUBLIC_DEMO=1` dan database masih kosong, build juga membuat data contoh: dua akun, empat perusahaan, dan sembilan lowongan.
 
 ### 3. Isi environment variables

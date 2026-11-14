@@ -2,7 +2,7 @@
 
 Platform lowongan kerja dengan dua peran: pelamar mencari lowongan dan melamar dengan CV, perekrut memasang lowongan dan mengelola proses seleksi. Proyek ini berawal dari submission kelas Belajar Fundamental Back-End dengan JavaScript (Dicoding), lalu dikembangkan menjadi website lengkap.
 
-Status: berjalan dan teruji di lingkungan lokal. Mode demo untuk Vercel sudah tersedia dan teruji secara lokal; panduannya ada di [docs/DEPLOY-VERCEL.md](docs/DEPLOY-VERCEL.md).
+**Demo:** https://openjob-virid.vercel.app — masuk dengan akun contoh di halaman Masuk. Demo berjalan di Vercel dan Neon tanpa RabbitMQ dan Redis; arsitektur lengkap dijalankan secara lokal (lihat di bawah).
 
 ## Fitur
 
@@ -98,7 +98,7 @@ npm run test:vercel   # mode Vercel dengan PostgreSQL dan SMTP tiruan
 
 ## Batasan
 
-- Mode Vercel belum pernah di-deploy sungguhan; pengujiannya memakai PostgreSQL dan SMTP tiruan.
+- Demo online belum mengirim email, jadi akun baru di sana belum bisa diverifikasi. Gunakan akun contoh.
 - Token sesi disimpan di `sessionStorage`; cookie HttpOnly perlu dipertimbangkan sebelum dipublikasikan.
 - Pembatasan percobaan login dan reset password disimpan di memori proses, sehingga belum cocok untuk lebih dari satu instance API.
 - Belum ada dashboard admin, unggah logo perusahaan, atau penjadwalan wawancara.
