@@ -1235,7 +1235,7 @@ async function employer(section, params = new URLSearchParams()) {
         "Perusahaan Saya",
         "Perkenalkan perusahaan dan kelola profilnya.",
       ) +
-        '<div class="section-head"><h2>Perusahaan saya</h2><button class="btn" data-action="company-form">' +
+        '<div class="section-head end"><button class="btn" data-action="company-form">' +
         icon("plus") +
         "Tambah Perusahaan</button></div>" +
         (c.companies.length

@@ -1938,3 +1938,7 @@ img.company-avatar.logo {
     position: static;
   }
 }
+/* Baris tombol tanpa judul, dipakai saat judul halaman sudah menjelaskan isinya. */
+.section-head.end {
+  justify-content: flex-end;
+}
