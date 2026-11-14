@@ -8,16 +8,21 @@ if (!process.env.WEB_BASE_URL && process.env.VERCEL_PROJECT_PRODUCTION_URL)
   process.env.WEB_BASE_URL =
     "https://" + process.env.VERCEL_PROJECT_PRODUCTION_URL;
 
+// Email opsional. Bila tidak ada satu pun pengaturan MAIL_, situs berjalan seperti demo
+// tanpa email: akun contoh tetap bisa dipakai, tetapi akun baru tidak bisa diverifikasi.
+const mailVars = ["MAIL_HOST", "MAIL_PORT", "MAIL_USER", "MAIL_PASSWORD"];
+const mailEnabled = mailVars.some((name) => process.env[name]);
+if (!mailEnabled) {
+  process.env.OPENJOB_DEMO = "1";
+  delete process.env.OPENJOB_DEMO_MAIL;
+}
 const required = [
   "DATABASE_URL",
   "ACCESS_TOKEN_KEY",
   "REFRESH_TOKEN_KEY",
   "PASSWORD_RESET_KEY",
   "WEB_BASE_URL",
-  "MAIL_HOST",
-  "MAIL_PORT",
-  "MAIL_USER",
-  "MAIL_PASSWORD",
+  ...(mailEnabled ? mailVars : []),
 ];
 const missing = required.filter((name) => !process.env[name]);
 
@@ -52,6 +57,7 @@ if (functions.attachDatabasePool) functions.attachDatabasePool(pool);
 app.set("trust proxy", 1);
 
 const transport =
+  mailEnabled &&
   missing.length === 0 &&
   nodemailer.createTransport({
     host: process.env.MAIL_HOST,
@@ -142,7 +148,7 @@ function handler(req, res) {
     );
   }
   // Setiap perubahan yang berhasil bisa menjadwalkan email; kirim setelah respons selesai.
-  if (req.method !== "GET" && req.method !== "HEAD")
+  if (mailEnabled && req.method !== "GET" && req.method !== "HEAD")
     res.on("finish", () => {
       if (res.statusCode < 400) waitUntil(drain());
     });

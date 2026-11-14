@@ -3,14 +3,14 @@
 
 > Dokumen ini adalah README submission Dicoding yang asli, disimpan sebagai arsip. Ringkasan proyek terbaru ada di [README utama](../README.md). Collection Postman V2 mengikuti kontrak lama dan tidak lagi lulus penuh pada kode website saat ini.
 
-**Panduan menjalankan kode utama saat ini: [MENJALANKAN-OPENJOB.md](../MENJALANKAN-OPENJOB.md).** Panduan ini membedakan demo, pengujian persisten, dan aplikasi biasa.
+**Panduan menjalankan kode utama saat ini: [MENJALANKAN-OPENJOB.md](MENJALANKAN-OPENJOB.md).** Panduan ini membedakan demo, pengujian persisten, dan aplikasi biasa.
 
-Backup dan uji pemulihan QA tersedia melalui [BACKUP-PEMULIHAN.md](../BACKUP-PEMULIHAN.md).
+Backup dan uji pemulihan QA tersedia melalui [BACKUP-PEMULIHAN.md](BACKUP-PEMULIHAN.md).
 
 > **Pengembangan website:** frontend lokal sekarang tersedia di `openjob_web/`.
-> Baca [WEBSITE.md](../WEBSITE.md) untuk fitur, perubahan kontrak API, migrasi, dan pengujian terbaru.
-> Coba dengan `cd openjob_api` lalu `npm run demo`, atau jalankan `Buka-Demo.cmd`.
-> Untuk website pengujian dengan data tersimpan, jalankan `Buka-Pengujian-Postgres.cmd` lalu buka `http://127.0.0.1:3101`. Memerlukan layanan Docker lokal; petunjuk lengkap ada di WEBSITE.md. Demo sementara tetap di port 3100.
+> Baca [WEBSITE.md](WEBSITE.md) untuk fitur, perubahan kontrak API, migrasi, dan pengujian terbaru.
+> Coba dengan `npm run demo` dari folder utama atau dari `openjob_api`.
+> Untuk website pengujian dengan data tersimpan, jalankan `npm run qa:web` lalu buka `http://127.0.0.1:3101`. Memerlukan layanan Docker lokal; petunjuk lengkap ada di WEBSITE.md. Demo sementara tetap di port 3100.
 > Bagian di bawah merupakan dokumentasi submission API V2 awal; beberapa aturan akses telah diperketat untuk website.
 
 Submission proyek OpenJob RESTful API Versi 2 untuk kelas

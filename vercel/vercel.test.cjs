@@ -102,6 +102,36 @@ const ok = (m) => console.log("ok", ++n, m);
   assert.match(probe.stdout, /^503 .*WEB_BASE_URL, MAIL_HOST$/m, probe.stderr);
   ok("missing settings return 503 naming the variables");
 
+  // Tanpa pengaturan MAIL_ sama sekali: situs jalan, akun baru tidak dijadwalkan email.
+  const noMail = await run(
+    [
+      "-e",
+      `
+    const h=require('./api/index.js');
+    const s=require('http').createServer(h).listen(0,async()=>{
+      const base='http://127.0.0.1:'+s.address().port;
+      const post=(p,b)=>fetch(base+p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+      const health=await (await fetch(base+'/api/health')).json();
+      const reg=await (await post('/api/users',{name:'Tanpa Email',email:'tanpa.email@openjob-demo.dev',password:'UjiOpenJob123!'})).json();
+      const reset=await post('/api/password-resets',{email:'tanpa.email@openjob-demo.dev'});
+      console.log(JSON.stringify({demo:health.demo,publicDemo:health.publicDemo,queued:reg.data.verificationQueued,reset:reset.status}));
+      process.exit(0);});`,
+    ],
+    { ...env, MAIL_HOST: "", MAIL_PORT: "", MAIL_USER: "", MAIL_PASSWORD: "" },
+  );
+  assert.deepEqual(
+    JSON.parse(noMail.stdout.trim().split("\n").pop()),
+    {
+      demo: true,
+      publicDemo: true,
+      queued: false,
+      reset: 503,
+    },
+    noMail.stderr,
+  );
+  assert.equal(mails.length, 0);
+  ok("without MAIL_ settings the site runs and no email is scheduled");
+
   Object.assign(process.env, env);
   const handler = require(path.join(root, "api/index.js"));
   const server = http.createServer(handler);

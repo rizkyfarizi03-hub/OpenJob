@@ -1,5 +1,7 @@
 # OpenJob Website — versi lokal
 
+> Catatan arsip: file `Buka-Demo.cmd`, `Buka-Demo-Email.cmd`, dan `Buka-Pengujian-Postgres.cmd` yang disebut di bawah sudah dihapus. Gantinya `npm run demo`, `npm run demo:mail`, dan `npm run qa:web`, dari folder utama atau dari `openjob_api`.
+
 Frontend berada di `openjob_web/`. Express menyajikan HTML, CSS, JavaScript, dan API pada origin yang sama, sehingga tidak perlu server frontend, build, atau konfigurasi CORS tambahan. PostgreSQL, Redis, publisher RabbitMQ, dan consumer email tetap menggunakan arsitektur proyek awal.
 
 ## Coba dengan data demo
@@ -195,6 +197,7 @@ Pemeriksaan browser tahap 2 menunggu izin computer use. Skenario: upload PDF val
 - Browser demo telah memverifikasi upload, kembali ke posisi semula, kirim lamaran, status “Terkirim”, serta tombol hapus CV yang dinonaktifkan setelah dokumen dipakai.
 - Timeout pemeriksaan PDF kini menghasilkan respons 503 dan petunjuk mencoba kembali, bukan menyebut dokumen rusak. Batas waktu pemeriksaan tetap 5 detik dan file upload yang gagal dibersihkan.
 - Pengujian menggunakan database sementara dan akun buatan. Docker, SMTP, dan data PostgreSQL asli tidak dipakai. Tahap berikutnya: dashboard yang lebih praktis dan keandalan email; pemulihan akun/verifikasi email masih belum tersedia.
+
 
 
 ## Dashboard yang lebih praktis — 27 Oktober 2026

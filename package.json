@@ -3,6 +3,9 @@
   "private": true,
   "description": "Perkakas format dan lint untuk seluruh proyek OpenJob",
   "scripts": {
+    "demo": "npm run demo --prefix openjob_api",
+    "demo:mail": "npm run demo:mail --prefix openjob_api",
+    "qa:web": "npm run qa:web --prefix openjob_api",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",

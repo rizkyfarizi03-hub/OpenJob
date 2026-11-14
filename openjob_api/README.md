@@ -12,7 +12,7 @@ npm run migrate
 npm run start:dev
 ```
 
-`GET http://localhost:3000/` menampilkan website. JSON informasi mode/fitur tersedia pada `/api/health`. Panduan konfigurasi aplikasi biasa: [MENJALANKAN-OPENJOB.md](../MENJALANKAN-OPENJOB.md).
+`GET http://localhost:3000/` menampilkan website. JSON informasi mode/fitur tersedia pada `/api/health`. Panduan konfigurasi aplikasi biasa: [MENJALANKAN-OPENJOB.md](../docs/MENJALANKAN-OPENJOB.md).
 
 Saat `POST /applications` berhasil, API menyimpan record lamaran dan `application_outbox` secara transaksional. Publisher (otomatis berjalan bersama `npm start` / `npm run start:dev`) melakukan `assertQueue` durable `openjob.application.created`, memublikasikan `{ "application_id": "..." }` sebagai pesan persistent dengan publisher confirm, lalu menandai `published_at`. Jika RabbitMQ sementara offline, publisher mencoba lagi.
 
@@ -30,7 +30,7 @@ Consumer menjalankan proses tersendiri dari `../openjob_consumer`. **Tidak ada i
 
 ## Penting saat menguji
 
-- Enam endpoint memakai cache Redis dengan header `X-Data-Source` (lihat bagian cache di `../WEBSITE.md`); tanpa Redis, API tetap berjalan dari PostgreSQL. Untuk email gunakan `openjob_consumer`, RabbitMQ, serta SMTP seperti Mailpit.
+- Enam endpoint memakai cache Redis dengan header `X-Data-Source` (lihat bagian cache di `../docs/WEBSITE.md`); tanpa Redis, API tetap berjalan dari PostgreSQL. Untuk email gunakan `openjob_consumer`, RabbitMQ, serta SMTP seperti Mailpit.
 - Untuk run penuh dari collection Postman V2, gunakan database pengujian baru (collection memakai beberapa email statis). Jangan ubah assertion agar tampak lulus.
 - Folder `tests/fixtures/` berisi collection Postman yang tersedia pada ZIP semula. Pengujian upload Documents memerlukan request multipart/form-data manual.
 - Tidak menyertakan `.env` sungguhan, file CV, atau `node_modules`.

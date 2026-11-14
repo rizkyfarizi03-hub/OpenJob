@@ -9,4 +9,4 @@ Antarmuka HTML/CSS/JavaScript tanpa build tambahan, disajikan oleh Express dari 
 
 Jangan membuka `index.html` langsung melalui `file://`, karena API dan aset membutuhkan server.
 Dari `openjob_api`, jalankan `npm run demo` dan buka http://127.0.0.1:3100.
-Untuk PostgreSQL, jalankan migrasi lalu `npm start` sebagaimana dijelaskan pada [panduan website](../WEBSITE.md).
+Untuk PostgreSQL, jalankan migrasi lalu `npm start` sebagaimana dijelaskan pada [panduan website](../docs/WEBSITE.md).

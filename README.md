@@ -2,7 +2,7 @@
 
 Platform lowongan kerja dengan dua peran: pelamar mencari lowongan dan melamar dengan CV, perekrut memasang lowongan dan mengelola proses seleksi. Proyek ini berawal dari submission kelas Belajar Fundamental Back-End dengan JavaScript (Dicoding), lalu dikembangkan menjadi website lengkap.
 
-Status: berjalan dan teruji di lingkungan lokal. Mode demo untuk Vercel sudah tersedia dan teruji secara lokal; panduannya ada di [DEPLOY-VERCEL.md](DEPLOY-VERCEL.md).
+Status: berjalan dan teruji di lingkungan lokal. Mode demo untuk Vercel sudah tersedia dan teruji secara lokal; panduannya ada di [docs/DEPLOY-VERCEL.md](docs/DEPLOY-VERCEL.md).
 
 ## Fitur
 
@@ -40,7 +40,7 @@ Browser ──► openjob_api (Express) ──► PostgreSQL
 
 API dan consumer adalah dua aplikasi Node.js independen. Keduanya tidak saling mengimpor kode dan hanya berbagi database serta broker.
 
-Untuk demo online, `api/index.js` menyusun API dan fungsi kirim email consumer dalam satu fungsi Vercel tanpa RabbitMQ dan Redis, dengan CV disimpan di PostgreSQL. Penjelasannya ada di [DEPLOY-VERCEL.md](DEPLOY-VERCEL.md).
+Untuk demo online, `api/index.js` menyusun API dan fungsi kirim email consumer dalam satu fungsi Vercel tanpa RabbitMQ dan Redis, dengan CV disimpan di PostgreSQL. Penjelasannya ada di [docs/DEPLOY-VERCEL.md](docs/DEPLOY-VERCEL.md).
 
 Beberapa keputusan teknis:
 
@@ -61,6 +61,7 @@ Cara tercepat tidak membutuhkan PostgreSQL, Redis, atau RabbitMQ:
 ```powershell
 cd openjob_api
 npm ci
+cd ..
 npm run demo
 ```
 
@@ -71,7 +72,7 @@ Buka http://127.0.0.1:3100 lalu masuk dengan akun contoh:
 | Pelamar | pelamar@example.com | DemoOpenJob123! |
 | Perekrut | perekrut@example.com | DemoOpenJob123! |
 
-Data demo disimpan di memori dan hilang ketika proses berhenti. Untuk menjalankan dengan PostgreSQL, RabbitMQ, Redis, dan email, ikuti [MENJALANKAN-OPENJOB.md](MENJALANKAN-OPENJOB.md).
+Data demo disimpan di memori dan hilang ketika proses berhenti. Untuk menjalankan dengan PostgreSQL, RabbitMQ, Redis, dan email, ikuti [docs/MENJALANKAN-OPENJOB.md](docs/MENJALANKAN-OPENJOB.md).
 
 ## Pengujian
 
@@ -83,7 +84,7 @@ cd ../openjob_consumer
 npm test        # 12 tes consumer
 ```
 
-Kedua perintah berjalan tanpa layanan eksternal. Pengujian terhadap PostgreSQL, RabbitMQ, dan Mailpit sungguhan dijelaskan di [WEBSITE.md](WEBSITE.md).
+Kedua perintah berjalan tanpa layanan eksternal. Pengujian terhadap PostgreSQL, RabbitMQ, dan Mailpit sungguhan dijelaskan di [docs/WEBSITE.md](docs/WEBSITE.md).
 
 Format, lint, dan uji alur frontend dijalankan dari folder utama:
 
@@ -104,8 +105,8 @@ npm run test:vercel   # mode Vercel dengan PostgreSQL dan SMTP tiruan
 
 ## Dokumentasi lain
 
-- [MENJALANKAN-OPENJOB.md](MENJALANKAN-OPENJOB.md): konfigurasi dan cara menjalankan tiap mode.
-- [DEPLOY-VERCEL.md](DEPLOY-VERCEL.md): deploy demo publik ke Vercel.
-- [WEBSITE.md](WEBSITE.md): catatan pengembangan website, kontrak API, dan hasil pengujian.
-- [BACKUP-PEMULIHAN.md](BACKUP-PEMULIHAN.md): backup dan uji pemulihan lingkungan QA.
+- [docs/MENJALANKAN-OPENJOB.md](docs/MENJALANKAN-OPENJOB.md): konfigurasi dan cara menjalankan tiap mode.
+- [docs/DEPLOY-VERCEL.md](docs/DEPLOY-VERCEL.md): deploy demo publik ke Vercel.
+- [docs/WEBSITE.md](docs/WEBSITE.md): catatan pengembangan website, kontrak API, dan hasil pengujian.
+- [docs/BACKUP-PEMULIHAN.md](docs/BACKUP-PEMULIHAN.md): backup dan uji pemulihan lingkungan QA.
 - [docs/SUBMISSION-V2.md](docs/SUBMISSION-V2.md): dokumentasi submission Dicoding yang asli.

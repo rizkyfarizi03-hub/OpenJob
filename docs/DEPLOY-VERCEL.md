@@ -20,7 +20,7 @@ Status, percobaan ulang, dan batas gagal email tetap dicatat dengan kode consume
 - Akun GitHub dengan repository ini.
 - Akun Vercel (paket Hobby cukup).
 - Database PostgreSQL. Cara termudah adalah Neon dari Marketplace Vercel.
-- Akun SMTP untuk email: Brevo (disarankan untuk aplikasi) atau Gmail dengan App Password.
+- Opsional: akun SMTP untuk email, yaitu Brevo (disarankan untuk aplikasi) atau Gmail dengan App Password. Tanpa SMTP situs tetap jalan; lihat "Tanpa email" di bawah.
 
 ## Langkah
 
@@ -44,8 +44,8 @@ Buka **Settings → Environment Variables** dan isi:
 | --- | --- |
 | `ACCESS_TOKEN_KEY`, `REFRESH_TOKEN_KEY`, `PASSWORD_RESET_KEY` | Jalankan `node vercel/secrets.cjs` di komputer Anda, lalu salin ketiga baris hasilnya. Jangan dibagikan. |
 | `OPENJOB_PUBLIC_DEMO` | `1` agar data contoh dibuat dan akun contoh dikunci |
-| `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASSWORD` | Pengaturan SMTP, lihat tabel di bawah |
-| `MAIL_FROM` | Alamat pengirim, misalnya `OpenJob <alamat@domain-anda>` |
+| `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASSWORD` | Opsional. Pengaturan SMTP, lihat tabel di bawah |
+| `MAIL_FROM` | Opsional. Alamat pengirim, misalnya `OpenJob <alamat@domain-anda>` |
 | `WEB_BASE_URL` | Opsional. Bila kosong, dipakai domain produksi Vercel (`https://nama-project.vercel.app`) |
 
 Pengaturan SMTP:
@@ -57,14 +57,24 @@ Pengaturan SMTP:
 
 Di Brevo, alamat pada `MAIL_FROM` harus didaftarkan sebagai pengirim terverifikasi. Di Gmail, `MAIL_FROM` sebaiknya alamat Gmail yang sama.
 
-Bila ada pengaturan yang belum diisi, situs menampilkan pesan 503 yang menyebutkan nama variabel yang kurang.
+Bila ada pengaturan wajib yang belum diisi, situs menampilkan pesan 503 yang menyebutkan nama variabel yang kurang. Pengaturan `MAIL_` dianggap satu paket: isi keempatnya, atau kosongkan semuanya.
+
+### Tanpa email
+
+Bila keempat pengaturan `MAIL_` dikosongkan, situs berjalan tanpa mengirim email:
+
+- Pengunjung tetap bisa mencoba semua fitur dengan akun contoh.
+- Akun baru bisa dibuat, tetapi tidak bisa diverifikasi, sehingga tidak bisa melamar atau menerbitkan lowongan. Website menjelaskan hal ini dan menyarankan akun contoh.
+- Lupa password dan kirim ulang verifikasi menampilkan pesan bahwa email belum tersedia.
+
+Email bisa ditambahkan kapan saja: isi keempat pengaturan `MAIL_` dan `MAIL_FROM`, lalu **Redeploy**.
 
 ### 4. Deploy dan coba
 
 Klik **Deploy** (atau **Redeploy** setelah mengisi pengaturan). Setelah selesai:
 
 1. Buka situs dan masuk dengan akun contoh `perekrut@example.com` atau `pelamar@example.com`, password `DemoOpenJob123!`.
-2. Daftar akun baru dengan email sungguhan, lalu periksa kotak masuk (termasuk folder spam) dan buka tautan verifikasinya.
+2. Bila email sudah diatur, daftar akun baru dengan email sungguhan, lalu periksa kotak masuk (termasuk folder spam) dan buka tautan verifikasinya.
 
 ## Perilaku khusus demo publik
 
@@ -93,4 +103,4 @@ Dari folder utama, setelah `npm ci` di folder utama, `openjob_api`, dan `openjob
 npm run test:vercel
 ```
 
-Tes ini menjalankan build, `api/index.js`, PostgreSQL (PGlite lewat protokol jaringan Postgres), dan server SMTP tiruan. Yang diperiksa: migrasi dan data contoh, pesan konfigurasi yang kurang, pendaftaran dan verifikasi lewat email, CV dan logo di database, lamaran dan email perubahan status, reset password, pembatasan pendaftaran, serta kegagalan SMTP. Tes ini tidak menghubungi Vercel, Neon, maupun layanan email sungguhan, jadi deploy pertama tetap perlu dicoba langsung.
+Tes ini menjalankan build, `api/index.js`, PostgreSQL (PGlite lewat protokol jaringan Postgres), dan server SMTP tiruan. Yang diperiksa: migrasi dan data contoh, pesan konfigurasi yang kurang, mode tanpa email, pendaftaran dan verifikasi lewat email, CV dan logo di database, lamaran dan email perubahan status, reset password, pembatasan pendaftaran, serta kegagalan SMTP. Tes ini tidak menghubungi Vercel, Neon, maupun layanan email sungguhan, jadi deploy pertama tetap perlu dicoba langsung.

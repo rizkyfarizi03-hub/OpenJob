@@ -6,7 +6,7 @@ Tidak menggunakan kode, dependency, atau file environment dari `openjob_api`. De
 
 ## Konfigurasi & menjalankan (PowerShell)
 
-Panduan konfigurasi dua aplikasi dan perbedaannya dari demo: [MENJALANKAN-OPENJOB.md](../MENJALANKAN-OPENJOB.md). `RABBITMQ_QUEUE_PREFIX` opsional harus sama dengan API; bawaan `openjob`. Gunakan awalan berbeda untuk lingkungan yang berbagi broker agar pesan tidak tertukar.
+Panduan konfigurasi dua aplikasi dan perbedaannya dari demo: [MENJALANKAN-OPENJOB.md](../docs/MENJALANKAN-OPENJOB.md). `RABBITMQ_QUEUE_PREFIX` opsional harus sama dengan API; bawaan `openjob`. Gunakan awalan berbeda untuk lingkungan yang berbagi broker agar pesan tidak tertukar.
 
 ```powershell
 Copy-Item .env.example .env
@@ -42,4 +42,4 @@ Notifikasi menggunakan semantik *at-least-once*, bukan jaminan exactly-once: cra
 
 Antrean tambahan `openjob.account.email_verification` dan `openjob.account.email_verification.failed` memakai payload ID permintaan saja. Jalankan migrasi API `1793400000000_email_verification.js` sebelum menjalankan API/publisher/consumer versi ini. Konfigurasi memakai `PASSWORD_RESET_KEY` dan `WEB_BASE_URL` yang sama di API dan consumer; tujuan HMAC verifikasi berbeda dari reset password. Tautan berlaku 24 jam. Consumer melewati permintaan kedaluwarsa, dibatalkan, sudah dipakai, atau alamat yang sudah diverifikasi/berubah.
 
-Uji layanan lokal terbaru mencakup empat email contoh: lamaran, perubahan status, reset password, dan verifikasi email. Mode demo email pada `Buka-Demo-Email.cmd` mengirim email akun langsung ke Mailpit lokal dengan database sementara; tidak memakai antrean aplikasi asli.
+Uji layanan lokal terbaru mencakup empat email contoh: lamaran, perubahan status, reset password, dan verifikasi email. Mode demo email pada `npm run demo:mail` mengirim email akun langsung ke Mailpit lokal dengan database sementara; tidak memakai antrean aplikasi asli.

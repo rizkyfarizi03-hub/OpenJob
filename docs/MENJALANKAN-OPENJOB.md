@@ -8,9 +8,11 @@ Website, API, dan consumer yang digunakan demo adalah kode utama yang sama. Jalu
 
 | Cara | Alamat | Data | Perintah |
 | --- | --- | --- | --- |
-| Demo sementara | 3100 | Hilang setelah restart | `Buka-Demo.cmd` atau `Buka-Demo-Email.cmd` |
-| Pengujian persisten | 3101 | PostgreSQL Docker QA, akun contoh | `Buka-Pengujian-Postgres.cmd` |
+| Demo sementara | 3100 | Hilang setelah restart | `npm run demo` atau `npm run demo:mail` |
+| Pengujian persisten | 3101 | PostgreSQL Docker QA, akun contoh | `npm run qa:web` |
 | Aplikasi biasa | Mengikuti `HOST` / `PORT` API, contoh 3000 | Database pilihan pada konfigurasi | `npm start` di API dan consumer, masing-masing terminal |
+
+Perintah demo dan pengujian di tabel bisa dijalankan dari folder utama maupun dari `openjob_api`, setelah `npm ci` di `openjob_api` (dan `openjob_consumer` untuk pengujian persisten).
 
 Port 5432/5433 adalah PostgreSQL, bukan website. Mode aplikasi biasa tidak membuat akun atau lowongan contoh secara otomatis. Kategori bawaan disiapkan oleh migrasi.
 
